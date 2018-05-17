@@ -135,16 +135,18 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
     legend('bottom', c('Male', 'Female'), lty = 2:1, cex = 2)  
 }
 
-flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 60^2*1.5, mvThreshold = 2, hz = 5, emptyWellThreshold = 5){
+flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
   #mvThreshold = threshold to call bout of continous movement. Default 2s
   #hz = movement aquisition rate. Default 5 Hz
   #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
-  #TO DO: add some threshold like "If the fly seem to move again after n hours of being still, thats an error"
+  #errorThreshold = threshold after which later movement is logged as warning
+  
   sleepMin <- sleepThreshold*hz
   deadMin <- deathThreshold*hz
   mvMin <- mvThreshold*hz
+  errorMin <- errorThreshold*hz
   
   #Run length encoding of movement > 0, == streaks of movement
   centroidDist.mov <- apply(centroidDist, MARGIN = 2, FUN = function(x){rle(x > 0)})
@@ -155,16 +157,28 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     
     #Sleep and Death
     sleep <- movement$lengths > sleepMin & !movement$values # if streak length > sleepThreshold AND streak value == F (no movement), the fly is sleeping or dead
+    
+    
     if(any(sleep) & length(movement$lengths) > emptyWellThreshold){
-      tmp <- which(sleep)
-      lastNoMov <- tmp[length(tmp)]
+      sleepIndexes <- which(sleep)
+      
+      for (x in sleepIndexes) {
+        if(movement$lengths[x] > errorMin){
+          if(!is.na(movement$lengths[x+1])){
+            #Setup preferred error logging
+            print("Warning: Fly movement detected after error threshold gap")
+          }
+        }
+      }
+      
+      lastNoMov <- sleepIndexes[length(sleepIndexes)]
       if(movement$lengths[lastNoMov] > deadMin & all(!movement$values[lastNoMov:length(sleep)])){ #If the last recorded no movement bout is > deadMin AND no movement after that point
         dead <- sum(movement$lengths[1:(lastNoMov - 1)]) #Call dead at the start of the last no movement bout
         
         #Call sleep for the previous no movement bouts
-        sleepLengths <- movement$lengths[tmp[1:(length(tmp) - 1)]]/hz #sleep lengths (s)
-        sleepNr <- length(tmp) - 1
-        sleepStartTimes <- sapply(tmp[1:(length(tmp) - 1)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
+        sleepLengths <- movement$lengths[sleepIndexes[1:(length(sleepIndexes) - 1)]]/hz #sleep lengths (s)
+        sleepNr <- length(sleepIndexes) - 1
+        sleepStartTimes <- sapply(sleepIndexes[1:(length(sleepIndexes) - 1)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
       }
       else{
         dead <- NA
