@@ -135,13 +135,13 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
     legend('bottom', c('Male', 'Female'), lty = 2:1, cex = 2)  
 }
 
-flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2){
+flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 5*60^2){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
   #mvThreshold = threshold to call bout of continous movement. Default 2s
   #hz = movement aquisition rate. Default 5 Hz
   #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
-  #errorThreshold = threshold after which later movement is logged as warning
+  #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
   
   sleepMin <- sleepThreshold*hz
   deadMin <- deathThreshold*hz
@@ -166,7 +166,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
         if(movement$lengths[x] > errorMin){
           if(!is.na(movement$lengths[x+1])){
             #Setup preferred error logging
-            print("Warning: Fly movement detected after error threshold gap")
+            warning(paste("Movement detected after error threshold gap for fly", i))
           }
         }
       }
@@ -199,7 +199,14 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     if(any(mvBouts)){
       mvLengths <- movement$lengths[mvBouts]/hz 
       mvNr <- sum(mvBouts)
-      mvStartTimes <- sapply(which(mvBouts), function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
+      mvBouts.index <- which(mvBouts)
+      if(mvBouts.index[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
+        mvStartTimes <- sapply(mvBouts.index[-1], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
+        mvStartTimes <- c(1, mvStartTimes)
+      }
+      else{
+        mvStartTimes <- sapply(mvBouts.index, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
+      }
       mvEndTimes <- sapply(which(mvBouts), function(x){ sum(movement$lengths[1:x]) } ) 
       
       #Get the average speed in every bout
