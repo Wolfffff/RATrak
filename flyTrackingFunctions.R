@@ -134,6 +134,7 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
   if(!is.na(sex[1]))
     legend('bottom', c('Male', 'Female'), lty = 2:1, cex = 2)  
 }
+centroidDist = fread("/Users/Wolf/Desktop/")
 flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousDataThreshold = 5){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
@@ -167,11 +168,11 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     sleepQC = lapply(sleepIndexes[1:(length(sleepIndexes) - 1)], FUN = function(x){return(sum(centroidDist[sum(movement$lengths[1:x]):sum(movement$lengths[1:x+1]), i]) > erroneousDataThreshold)})
     
     for (s in 1:length(sleepQC)) {
-      if (sleepQC[[s]]) {
+      if (!sleepQC[[s]] && !is.na(movement$values[sleepIndexes[s] + 2])) {
         movement$lengths[sleepIndexes[s]] = movement$lengths[sleepIndexes[s]] + movement$lengths[sleepIndexes[s] + 1] + movement$lengths[sleepIndexes[s] + 2]
         movement$lengths = movement$lengths[-c((sleepIndexes[s] + 1), (sleepIndexes[s] + 2))]
         movement$values = movement$values[-c((sleepIndexes[s] + 1), (sleepIndexes[s] + 2))]
-    }
+      }
     }
     
     if(any(sleep) & length(movement$lengths) > emptyWellThreshold){
