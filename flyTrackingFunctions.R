@@ -134,14 +134,16 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
   if(!is.na(sex[1]))
     legend('bottom', c('Male', 'Female'), lty = 2:1, cex = 2)  
 }
-
-flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2){
+centroidDist <- read.table('/Users/Wolf/Desktop/NN_NC_cross180425_offspring1_centroidDist.txt')
+flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousDataThreshold = 5){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
   #mvThreshold = threshold to call bout of continous movement. Default 2s
   #hz = movement aquisition rate. Default 5 Hz
   #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
   #errorThreshold = threshold after which later movement is logged as warning
+  #erroneousDataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of movement, it is assumed to be erroneous data and processed as part of the prior bout
+  
   
   sleepMin <- sleepThreshold*hz
   deadMin <- deathThreshold*hz
@@ -158,6 +160,19 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     #Sleep and Death
     sleep <- movement$lengths > sleepMin & !movement$values # if streak length > sleepThreshold AND streak value == F (no movement), the fly is sleeping or dead
     
+    
+    #Filtering "bad" movement out
+    sleepIndexes <- which(sleep)
+    
+    sleepQC = lapply(sleepIndexes[1:(length(sleepIndexes) - 1)], FUN = function(x){return(sum(centroidDist[sum(movement$lengths[1:x]):sum(movement$lengths[1:x+1]), i]) > erroneousDataThreshold)})
+    
+    for (s in 1:length(sleepQC)) {
+      if (sleepQC[[s]]) {
+        movement$lengths[sleepIndexes[s]] = movement$lengths[sleepIndexes[s]] + movement$lengths[sleepIndexes[s] + 1] + movement$lengths[sleepIndexes[s] + 2]
+        movement$lengths = movement$lengths[-c((sleepIndexes[s] + 1), (sleepIndexes[s] + 2))]
+        movement$values = movement$values[-c((sleepIndexes[s] + 1), (sleepIndexes[s] + 2))]
+    }
+    }
     
     if(any(sleep) & length(movement$lengths) > emptyWellThreshold){
       sleepIndexes <- which(sleep)
