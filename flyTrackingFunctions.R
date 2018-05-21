@@ -135,14 +135,14 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
     legend('bottom', c('Male', 'Female'), lty = 2:1, cex = 2)  
 }
 centroidDist = fread("/Users/Wolf/Desktop/")
-flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousDataThreshold = 5){
+flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, erroneousMovementDataThreshold = 5){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
   #mvThreshold = threshold to call bout of continous movement. Default 2s
   #hz = movement aquisition rate. Default 5 Hz
   #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
   #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
-  #erroneousDataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of movement, it is assumed to be erroneous data and processed as part of the prior bout
+  #erroneous(Sleep/Movement)DataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
 
   
   
@@ -165,7 +165,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     #Filtering "bad" movement out
     sleepIndexes <- which(sleep)
     
-    sleepQC = lapply(sleepIndexes[1:(length(sleepIndexes) - 1)], FUN = function(x){return(sum(centroidDist[sum(movement$lengths[1:x]):sum(movement$lengths[1:x+1]), i]) > erroneousDataThreshold)})
+    sleepQC = lapply(sleepIndexes[1:(length(sleepIndexes) - 1)], FUN = function(x){return(centroidDist[sum(movement$lengths[1:x]):sum(movement$lengths[1:x+1]), i]) > erroneousSleepDataThreshold})
     
     for (s in 1:length(sleepQC)) {
       if (!sleepQC[[s]] && !is.na(movement$values[sleepIndexes[s] + 2])) {
@@ -173,7 +173,14 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
         movement$lengths = movement$lengths[-c((sleepIndexes[s] + 1), (sleepIndexes[s] + 2))]
         movement$values = movement$values[-c((sleepIndexes[s] + 1), (sleepIndexes[s] + 2))]
       }
+      else if (!sleepQC[[s]] && is.na(movement$values[sleepIndexes[s] + 2])) {
+        movement$lengths[sleepIndexes[s]] = movement$lengths[sleepIndexes[s]] + movement$lengths[sleepIndexes[s] + 1]
+        movement$lengths = movement$lengths[-(sleepIndexes[s] + 1)]
+        movement$values = movement$values[-(sleepIndexes[s] + 1)]
+      }
     }
+  
+  sleep <- movement$lengths > sleepMin & !movement$values #Redefine with updated movement from above code
     
     if(any(sleep) & length(movement$lengths) > emptyWellThreshold){
       sleepIndexes <- which(sleep)
@@ -212,6 +219,25 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     
     #Bouts of movement
     mvBouts <- movement$lengths > mvMin & movement$values #If streak length > mvMin AND streak value == T (movement), the fly is moving continously
+    
+    mvBoutsIndexes <- which(sleep)
+    
+    mvBoutsQC = lapply(mvBoutsIndexes[1:(length(mvBoutsIndexes) - 1)], FUN = function(x){return(centroidDist[sum(movement$lengths[1:x]):sum(movement$lengths[1:x+1]), i]) > erroneousMovementDataThreshold})
+    
+    for (s in 1:length(mvBoutsQC)) {
+      if (!mvBoutsQC[[s]] && !is.na(movement$values[mvBoutsIndexes[s] + 2])) {
+        movement$lengths[sleepIndexes[s]] = movement$lengths[mvBoutsIndexes[s]] + movement$lengths[mvBoutsIndexes[s] + 1] + movement$lengths[mvBoutsIndexes[s] + 2]
+        movement$lengths = movement$lengths[-c((mvBoutsIndexes[s] + 1), (mvBoutsIndexes[s] + 2))]
+        movement$values = movement$values[-c((mvBoutsIndexes[s] + 1), (mvBoutsIndexes[s] + 2))]
+      }
+      else if (!mvBoutsQC[[s]] && is.na(movement$values[mvBoutsIndexes[s] + 2])) {
+        movement$lengths[mvBoutsIndexes[s]] = movement$lengths[mvBoutsIndexes[s]] + movement$lengths[mvBoutsIndexes[s] + 1]
+        movement$lengths = movement$lengths[-(mvBoutsIndexes[s] + 1)]
+        movement$values = movement$values[-(mvBoutsIndexes[s] + 1)]
+      }
+    }
+    mvBouts <- movement$lengths > mvMin & movement$values #Reassigning based on above data processing
+    
     if(any(mvBouts)){
       mvLengths <- movement$lengths[mvBouts]/hz 
       mvNr <- sum(mvBouts)
