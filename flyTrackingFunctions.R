@@ -178,11 +178,13 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
         sleepIndexes[(s+1):length(sleepIndexes)] <- sleepIndexes[(s+1):length(sleepIndexes)] - length(rmIndexes)
       }
     }
-    sleep <- movement$lengths > sleepMin & !movement$values #Redefine with updated movement from above code
+    
+    #Redefine with updated movement from above code
+    sleep <- movement$lengths > sleepMin & !movement$values 
+    sleepIndexes <- which(sleep)
     
     if(any(sleep) & length(movement$lengths) > emptyWellThreshold){
-      sleepIndexes <- which(sleep)
-      
+      #Checking if any flies moved after being still > errorMin
       for (x in sleepIndexes) {
         if(movement$lengths[x] > errorMin){
           if(!is.na(movement$lengths[x+1])){
@@ -197,15 +199,29 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
         dead <- sum(movement$lengths[1:(lastNoMov - 1)]) #Call dead at the start of the last no movement bout
         
         #Call sleep for the previous no movement bouts
+        if(sleepIndexes[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
+          sleepStartTimes <- sapply(sleepIndexes[2:(length(sleepIndexes) - 1)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
+          sleepStartTimes <- c(1, sleepStartTimes)
+        }
+        else{
+          sleepStartTimes <- sapply(sleepIndexes[1:(length(sleepIndexes) - 1)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
+        }
+        
         sleepLengths <- movement$lengths[sleepIndexes[1:(length(sleepIndexes) - 1)]] #sleep lengths 
         sleepNr <- length(sleepIndexes) - 1
-        sleepStartTimes <- sapply(sleepIndexes[1:(length(sleepIndexes) - 1)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
       }
       else{
         dead <- NA
+        
+        if(sleepIndexes[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
+          sleepStartTimes <- sapply(sleepIndexes[2:length(sleepIndexes)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
+          sleepStartTimes <- c(1, sleepStartTimes)
+        }
+        else{
+          sleepStartTimes <- sapply(sleepIndexes, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
+        }
         sleepLengths <- movement$lengths[sleep]/hz #sleep lengths (s)
         sleepNr <- sum(sleep)
-        sleepStartTimes <- sapply(which(sleep), function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
       }
     }
     else{
