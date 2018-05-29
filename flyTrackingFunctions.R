@@ -220,7 +220,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
         else{
           sleepStartTimes <- sapply(sleepIndexes, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
         }
-        sleepLengths <- movement$lengths[sleep]/hz #sleep lengths (s)
+        sleepLengths <- movement$lengths[sleep] #sleep lengths 
         sleepNr <- sum(sleep)
       }
     }
@@ -257,7 +257,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     mvBouts <- movement$lengths > mvMin & movement$values #Reassigning based on above data processing
     
     if(any(mvBouts)){
-      mvLengths <- movement$lengths[mvBouts]/hz 
+      mvLengths <- movement$lengths[mvBouts]
       mvNr <- sum(mvBouts)
       mvBouts.index <- which(mvBouts)
       if(mvBouts.index[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
