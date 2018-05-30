@@ -135,6 +135,8 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
     legend('bottom', c('Male', 'Female'), lty = 2:1, cex = 2)  
 }
 
+
+
 flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 2, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, erroneousMovementDataThreshold = 5){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
@@ -143,7 +145,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
   #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
   #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
   #erroneous(Sleep/Movement)DataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
-
+  
   sleepMin <- sleepThreshold*hz
   deadMin <- deathThreshold*hz
   mvMin <- mvThreshold*hz
@@ -161,21 +163,30 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     
     #Merge sleep bouts that are separated by movement < erroneousSleepDataThreshold
     sleepIndexes <- which(sleep)
-    sleepQC = sapply(1:(length(sleepIndexes) - 1), FUN = function(x){
-      from <- sum(movement$lengths[1:sleepIndexes[x]])
-      to <- sum(movement$lengths[1:(sleepIndexes[x+1] - 1)])
-      return(sum(centroidDist[from:to, i]) > erroneousSleepDataThreshold)
-    })
+    sleepQC = sapply(
+      1:(length(sleepIndexes) - 1),
+      FUN = function(x) {
+        if ((x > 0)) {
+          if (sum(movement$lengths[1:sleepIndexes[x]]) != sum(movement$lengths)) {
+            from <- sum(movement$lengths[1:sleepIndexes[x]])
+            to <- sum(movement$lengths[1:(sleepIndexes[x + 1] - 1)])
+            return(sum(centroidDist[from:to, i]) > erroneousSleepDataThreshold)
+          }
+        }
+      }
+    )
     for (s in 1:length(sleepQC)) {
-      if (!sleepQC[s]) { #If the movement after the sleep bout < erroneousSleepDataThreshold, merge the sleep bouts
-        #Merge bouts
-        movement$lengths[sleepIndexes[s]] = sum(movement$lengths[ sleepIndexes[s]:sleepIndexes[s+1] ])
-        rmIndexes <- (sleepIndexes[s] + 1):sleepIndexes[s+1]
-        movement$lengths = movement$lengths[-rmIndexes]
-        movement$values = movement$values[-rmIndexes]
-        
-        #Update sleepIndexes
-        sleepIndexes[(s+1):length(sleepIndexes)] <- sleepIndexes[(s+1):length(sleepIndexes)] - length(rmIndexes)
+      if (!is.null(sleepQC[[s]])){
+        if(!sleepQC[s]) { #If the movement after the sleep bout < erroneousSleepDataThreshold, merge the sleep bouts
+          #Merge bouts
+          movement$lengths[sleepIndexes[s]] = sum(movement$lengths[ sleepIndexes[s]:sleepIndexes[s+1] ])
+          rmIndexes <- (sleepIndexes[s] + 1):sleepIndexes[s+1]
+          movement$lengths = movement$lengths[-rmIndexes]
+          movement$values = movement$values[-rmIndexes]
+          
+          #Update sleepIndexes
+          sleepIndexes[(s+1):length(sleepIndexes)] <- sleepIndexes[(s+1):length(sleepIndexes)] - length(rmIndexes)
+        }
       }
     }
     
@@ -236,22 +247,32 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     mvBoutsIndexes <- which(mvBouts)
     
     #Merge bouts that are separated by a non movement < erroneousMovementDataThreshold
-    mvBoutsQC = sapply(1:(length(mvBoutsIndexes) - 1), FUN = function(x){
-      from <- sum(movement$lengths[1:mvBoutsIndexes[x]])
-      to <- sum(movement$lengths[1:(mvBoutsIndexes[x+1] - 1)])
-      noMov <- sum(centroidDist[from:to, i] == 0) #Between the the two mv bouts, count number of frames with speed == 0 (this could be done using the rle object also. Possibly more efficient)
-      return(noMov < erroneousMovementDataThreshold)
-    })
+    mvBoutsQC = sapply(
+      1:(length(mvBoutsIndexes) - 1),
+      FUN = function(x) {
+        if (x > 0) {
+          if (!is.na(mvBoutsIndexes[x]) && sum(movement$lengths[1:mvBoutsIndexes[x]], na.rm = TRUE) != sum(movement$lengths)) {
+            from <- sum(movement$lengths[1:mvBoutsIndexes[x]])
+            to <- sum(movement$lengths[1:(mvBoutsIndexes[x + 1] - 1)])
+            noMov <-
+              sum(centroidDist[from:to, i] == 0) #Between the the two mv bouts, count number of frames with speed == 0 (this could be done using the rle object also. Possibly more efficient)
+            return(noMov < erroneousMovementDataThreshold)
+          }
+        }
+      }
+    )
     for (s in 1:length(mvBoutsQC)) {
-      if (mvBoutsQC[s]) {
-        #Merge movement bouts
-        movement$lengths[mvBoutsIndexes[s]] = sum(movement$lengths[ mvBoutsIndexes[s]:mvBoutsIndexes[s+1] ])
-        rmIndexes <- (mvBoutsIndexes[s] + 1):mvBoutsIndexes[s+1]
-        movement$lengths = movement$lengths[-rmIndexes]
-        movement$values = movement$values[-rmIndexes]
-        
-        #Update mvBoutsIndexes
-        mvBoutsIndexes[(s+1):length(mvBoutsIndexes)] <- mvBoutsIndexes[(s+1):length(mvBoutsIndexes)] - length(rmIndexes)
+      if (!is.null(mvBoutsQC[[s]])){
+        if (mvBoutsQC[s]) {
+          #Merge movement bouts
+          movement$lengths[mvBoutsIndexes[s]] = sum(movement$lengths[ mvBoutsIndexes[s]:mvBoutsIndexes[s+1] ])
+          rmIndexes <- (mvBoutsIndexes[s] + 1):mvBoutsIndexes[s+1]
+          movement$lengths = movement$lengths[-rmIndexes]
+          movement$values = movement$values[-rmIndexes]
+          
+          #Update mvBoutsIndexes
+          mvBoutsIndexes[(s+1):length(mvBoutsIndexes)] <- mvBoutsIndexes[(s+1):length(mvBoutsIndexes)] - length(rmIndexes)
+        }
       }
     }
     mvBouts <- movement$lengths > mvMin & movement$values #Reassigning based on above data processing
@@ -286,6 +307,31 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
   }
   return(result)
 }
+
+plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flies.sleepActivity(centroidDist = as.data.frame(centroidDist), erroneousMovementDataThreshold = 2, erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 10000, hz = 5){
+  
+  start <- start*hz
+  end <- end*hz
+  
+  h <- 1:nrow(centroidDist)/(60^2)
+  plot(h[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = 'h', ylab = 'Speed')
+  sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(hz*60^2)
+  sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(hz*60^2) + sleepActivity[[flyNumber]]$sleepLengths/(hz*60^2)
+  rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
+  #Movement
+  s <- 1:nrow(centroidDist)/hz
+  plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = 'Seconds', ylab = 'Speed')
+  rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/hz, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/hz + sleepActivity[[flyNumber]]$mvLengths/hz, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
+  for(i in 1:length(sleepActivity)){
+    start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/hz
+    end <- sleepActivity[[flyNumber]]$mvStartTimes[i]/hz + sleepActivity[[flyNumber]]$mvLengths[i]/hz
+    avgSpeed <- sleepActivity[[flyNumber]]$boutSpeeds[i]
+    lines(x = c(start, end), y = c(avgSpeed, avgSpeed), col = 'blue', lwd = 3)
+  }
+}
+
+
+
 
 plot.flyMv_rollNoMov <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', 
                                  treatmentLevels = NA, title = NA, 
@@ -373,10 +419,10 @@ plot.flyMv_survival <- function(activity, treatments = NA, time = 'h', hz = 5, t
   #Color for treatment
   if(!is.na(treatments[1])){
     cols.palette <- rainbow(length(activity.death_treatments), start = 0, end = 4/6)
-
+    
     if(is.na(treatmentLevels[1]))
       treatmentLevels <- names(activity.death_treatments)
-      # treatmentLevels <- paste('group', levels(tmp))
+    # treatmentLevels <- paste('group', levels(tmp))
   }
   else
     cols <- rep('black', ncol(centroidDist))
@@ -654,7 +700,7 @@ plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, 
     
     if(is.na(treatmentLevels[1]))
       treatmentLevels <- treatments.uniq
-      # treatmentLevels <- paste('group', unique(treatments))
+    # treatmentLevels <- paste('group', unique(treatments))
   }
   else
     cols <- rep('black', ncol(centroidDist))
