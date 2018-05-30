@@ -308,25 +308,60 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
   return(result)
 }
 
-plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flies.sleepActivity(centroidDist = as.data.frame(centroidDist), erroneousMovementDataThreshold = 2, erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 10000, hz = 5){
+plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flies.sleepActivity(centroidDist = as.data.frame(centroidDist), erroneousMovementDataThreshold = 2, erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both"){
+  #timeScale('h', 'm' or 's') gives timescale of plotting. Default is 's'
+  #start is start time in units of timeScale(e.g. 5 with 'h' is start at hour 5). Default is 1
+  #end is end time in units of timeScale as above. Default is 5
+  #plots is the type of plot output("both", "sleep" or "movement"). Default is "both"
+  #hz is hz used in data collection
+  #flyNumber is the index of the fly you are interested in
   
-  start <- start*hz
-  end <- end*hz
   
-  h <- 1:nrow(centroidDist)/(60^2)
-  plot(h[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = 'h', ylab = 'Speed')
-  sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(hz*60^2)
-  sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(hz*60^2) + sleepActivity[[flyNumber]]$sleepLengths/(hz*60^2)
-  rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
-  #Movement
-  s <- 1:nrow(centroidDist)/hz
-  plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = 'Seconds', ylab = 'Speed')
-  rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/hz, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/hz + sleepActivity[[flyNumber]]$mvLengths/hz, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
-  for(i in 1:length(sleepActivity)){
-    start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/hz
-    end <- sleepActivity[[flyNumber]]$mvStartTimes[i]/hz + sleepActivity[[flyNumber]]$mvLengths[i]/hz
-    avgSpeed <- sleepActivity[[flyNumber]]$boutSpeeds[i]
-    lines(x = c(start, end), y = c(avgSpeed, avgSpeed), col = 'blue', lwd = 3)
+  if(timeScale == "h"){
+    plotFactor = hz*60^2
+  }else if(timeScale == "m"){
+    plotFactor = hz*60
+  }else{
+    plotFactor = hz
+  }
+  
+  
+  
+  start <- start*plotFactor
+  end <- end*plotFactor
+  s <- 1:nrow(centroidDist)/plotFactor
+  
+  if(plots == "both"){
+    
+    plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed')
+    sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
+    sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
+    rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
+    #Movement
+    plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed')
+    rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
+    for(i in 1:length(sleepActivity)){
+      start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor
+      end <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvLengths[i]/plotFactor
+      avgSpeed <- sleepActivity[[flyNumber]]$boutSpeeds[i]
+      lines(x = c(start, end), y = c(avgSpeed, avgSpeed), col = 'blue', lwd = 3)
+    }
+  }
+  else if(plots == "movement"){
+    plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed')
+    rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
+    for(i in 1:length(sleepActivity)){
+      start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor
+      end <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvLengths[i]/plotFactor
+      avgSpeed <- sleepActivity[[flyNumber]]$boutSpeeds[i]
+      lines(x = c(start, end), y = c(avgSpeed, avgSpeed), col = 'blue', lwd = 3)
+    }
+  }
+  else if(plots == "sleep"){
+    plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed')
+    sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
+    sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
+    rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
   }
 }
 
