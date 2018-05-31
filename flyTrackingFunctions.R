@@ -172,35 +172,35 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
       }
       
       #Merge sleep bouts that are separated by movement < erroneousSleepDataThreshold
-      sleepQC = sapply(
-        1:(length(sleepIndexes) - 1),
-        FUN = function(x) {
-          if ((x > 0)) {
+      if(length(sleepIndexes) > 1){
+        sleepQC = sapply(
+          1:(length(sleepIndexes) - 1),
+          FUN = function(x) {
             if (sum(movement$lengths[1:sleepIndexes[x]]) != sum(movement$lengths)) {
               from <- sum(movement$lengths[1:sleepIndexes[x]])
               to <- sum(movement$lengths[1:(sleepIndexes[x + 1] - 1)])
-              return(sum(centroidDist[from:to, i]) > erroneousSleepDataThreshold)
+              return(sum(centroidDist[from:to, i], na.rm = T) > erroneousSleepDataThreshold)
+            }
+          }
+        )
+        for (s in 1:length(sleepQC)) {
+          if (!is.null(sleepQC[s])){
+            if(!sleepQC[s]) { #If the movement after the sleep bout < erroneousSleepDataThreshold, merge the sleep bouts
+              #Merge bouts
+              movement$lengths[sleepIndexes[s]] = sum(movement$lengths[ sleepIndexes[s]:sleepIndexes[s+1] ])
+              rmIndexes <- (sleepIndexes[s] + 1):sleepIndexes[s+1]
+              movement$lengths = movement$lengths[-rmIndexes]
+              movement$values = movement$values[-rmIndexes]
+              
+              #Update sleepIndexes
+              sleepIndexes[(s+1):length(sleepIndexes)] <- sleepIndexes[(s+1):length(sleepIndexes)] - length(rmIndexes)
             }
           }
         }
-      )
-      for (s in 1:length(sleepQC)) {
-        if (!is.null(sleepQC[s])){
-          if(!sleepQC[s]) { #If the movement after the sleep bout < erroneousSleepDataThreshold, merge the sleep bouts
-            #Merge bouts
-            movement$lengths[sleepIndexes[s]] = sum(movement$lengths[ sleepIndexes[s]:sleepIndexes[s+1] ])
-            rmIndexes <- (sleepIndexes[s] + 1):sleepIndexes[s+1]
-            movement$lengths = movement$lengths[-rmIndexes]
-            movement$values = movement$values[-rmIndexes]
-            
-            #Update sleepIndexes
-            sleepIndexes[(s+1):length(sleepIndexes)] <- sleepIndexes[(s+1):length(sleepIndexes)] - length(rmIndexes)
-          }
-        }
+        #Redefine with updated movement from above code
+        sleep <- movement$lengths > sleepMin & !movement$values 
+        sleepIndexes <- which(sleep)
       }
-      #Redefine with updated movement from above code
-      sleep <- movement$lengths > sleepMin & !movement$values 
-      sleepIndexes <- which(sleep)
       
       lastNoMov <- sleepIndexes[length(sleepIndexes)]
       if(movement$lengths[lastNoMov] > deadMin & all(!movement$values[lastNoMov:length(sleep)])){ #If the last recorded no movement bout is > deadMin AND no movement after that point
@@ -252,8 +252,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
             if (!is.na(mvBoutsIndexes[x]) && sum(movement$lengths[1:mvBoutsIndexes[x]], na.rm = TRUE) != sum(movement$lengths)) {
               from <- sum(movement$lengths[1:mvBoutsIndexes[x]])
               to <- sum(movement$lengths[1:(mvBoutsIndexes[x + 1] - 1)])
-              noMov <-
-                sum(centroidDist[from:to, i] == 0) #Between the the two mv bouts, count number of frames with speed == 0 (this could be done using the rle object also. Possibly more efficient)
+              noMov <- sum(centroidDist[from:to, i] == 0, na.rm = T) #Between the the two mv bouts, count number of frames with speed == 0 (this could be done using the rle object also. Possibly more efficient)
               return(noMov < erroneousMovementDataThreshold)
             }
           }
@@ -315,7 +314,6 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
   #hz is hz used in data collection
   #flyNumber is the index of the fly you are interested in
   
-  
   if(timeScale == "h"){
     plotFactor = hz*60^2
   }else if(timeScale == "m"){
@@ -323,7 +321,6 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
   }else{
     plotFactor = hz
   }
-  
   
   
   start <- start*plotFactor
@@ -339,7 +336,7 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
     #Movement
     plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed')
     rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
-    for(i in 1:length(sleepActivity)){
+    for(i in 1:length( sleepActivity[[flyNumber]]$mvStartTimes )){
       start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor
       end <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvLengths[i]/plotFactor
       avgSpeed <- sleepActivity[[flyNumber]]$boutSpeeds[i]
@@ -349,7 +346,7 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
   else if(plots == "movement"){
     plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed')
     rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
-    for(i in 1:length(sleepActivity)){
+    for(i in 1:length( sleepActivity[[flyNumber]]$mvStartTimes )){
       start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor
       end <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvLengths[i]/plotFactor
       avgSpeed <- sleepActivity[[flyNumber]]$boutSpeeds[i]
@@ -360,7 +357,7 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
     plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed')
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
-    rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
+    rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 100))
   }
 }
 
