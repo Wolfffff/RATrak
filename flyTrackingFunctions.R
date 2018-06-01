@@ -161,6 +161,8 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     sleep <- movement$lengths > sleepMin & !movement$values # if streak length > sleepThreshold AND streak value == F (no movement), the fly is sleeping or dead
     if(any(sleep) & length(movement$lengths) > emptyWellThreshold){
       sleepIndexes <- which(sleep)
+     
+      
       #Checking if any flies moved after being still > errorMin
       for (x in sleepIndexes) {
         if(movement$lengths[x] > errorMin){
@@ -201,6 +203,8 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
         sleep <- movement$lengths > sleepMin & !movement$values 
         sleepIndexes <- which(sleep)
       }
+
+      
       
       lastNoMov <- sleepIndexes[length(sleepIndexes)]
       if(movement$lengths[lastNoMov] > deadMin & all(!movement$values[lastNoMov:length(sleep)])){ #If the last recorded no movement bout is > deadMin AND no movement after that point
@@ -240,10 +244,34 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     }
     
     
+    
+    
+    
+    
     #Bouts of movement
     mvBouts <- movement$lengths > mvMin & movement$values #If streak length > mvMin AND streak value == T (movement), the fly is moving continously
     if(any(mvBouts)){
       mvBoutsIndexes <- which(mvBouts)
+      for (c in 1:length(mvBoutsIndexes)) { #Length problem
+        if(!is.na(mvBoutsIndexes[c])){
+        boutTracking <- movement$values[(mvBoutsIndexes[c]):length(movement$values)] | !movement$values[(mvBoutsIndexes[c]):length(movement$values)] & movement$lengths[(mvBoutsIndexes[c]):length(movement$values)] < 50
+        
+        nextFalseBout <- min(which(boutTracking == FALSE))
+        if(nextFalseBout != Inf){
+        if(!is.na(nextFalseBout && nextFalseBout != Inf && (nextFalseBout-2) != 0 && nextFalseBout != 1)){# 
+          mergeIndexes <- mvBoutsIndexes[c]:(mvBoutsIndexes[c] + nextFalseBout - 1)
+          movement$lengths[mvBoutsIndexes[c]] = sum(movement$lengths[mergeIndexes])
+          movement$lengths = movement$lengths[-mergeIndexes[-1]]
+          movement$values = movement$values[-mergeIndexes[-1]]
+          
+            }
+        }
+        mvBouts <- movement$lengths > mvMin & movement$values #Update
+        mvBoutsIndexes <- which(mvBouts)
+        }
+      }
+      
+      
       #Merge bouts that are separated by a non movement < erroneousMovementDataThreshold
       mvBoutsQC = sapply(
         1:(length(mvBoutsIndexes) - 1),
@@ -286,7 +314,6 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
         mvStartTimes <- sapply(mvBouts.index, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
       }
       mvEndTimes <- sapply(which(mvBouts), function(x){ sum(movement$lengths[1:x]) } ) 
-      
       #Get the average speed in every bout
       boutSpeeds <- rep(NA, length(mvStartTimes))
       for (t in 1:length(mvStartTimes)) {
