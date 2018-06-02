@@ -249,28 +249,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
     
     
     #Bouts of movement
-    mvBouts <- movement$lengths > mvMin & movement$values #If streak length > mvMin AND streak value == T (movement), the fly is moving continously
-    if(any(mvBouts)){
-      mvBoutsIndexes <- which(mvBouts)
-      for (c in 1:length(mvBoutsIndexes)) { #Length problem
-        if(!is.na(mvBoutsIndexes[c])){
-        boutTracking <- movement$values[(mvBoutsIndexes[c]):length(movement$values)] | !movement$values[(mvBoutsIndexes[c]):length(movement$values)] & movement$lengths[(mvBoutsIndexes[c]):length(movement$values)] < 50
-        
-        nextFalseBout <- min(which(boutTracking == FALSE))
-        if(nextFalseBout != Inf){
-        if(!is.na(nextFalseBout && nextFalseBout != Inf && (nextFalseBout-2) != 0 && nextFalseBout != 1)){# 
-          mergeIndexes <- mvBoutsIndexes[c]:(mvBoutsIndexes[c] + nextFalseBout - 1)
-          movement$lengths[mvBoutsIndexes[c]] = sum(movement$lengths[mergeIndexes])
-          movement$lengths = movement$lengths[-mergeIndexes[-1]]
-          movement$values = movement$values[-mergeIndexes[-1]]
-          
-            }
-        }
-        mvBouts <- movement$lengths > mvMin & movement$values #Update
-        mvBoutsIndexes <- which(mvBouts)
-        }
-      }
-      
+    
       
       #Merge bouts that are separated by a non movement < erroneousMovementDataThreshold
       mvBoutsQC = sapply(
@@ -280,6 +259,8 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
             if (!is.na(mvBoutsIndexes[x]) && sum(movement$lengths[1:mvBoutsIndexes[x]], na.rm = TRUE) != sum(movement$lengths)) {
               from <- sum(movement$lengths[1:mvBoutsIndexes[x]])
               to <- sum(movement$lengths[1:(mvBoutsIndexes[x + 1] - 1)])
+
+              #This is a problematic line along with the mirrored version in sleep
               noMov <- sum(centroidDist[from:to, i] == 0, na.rm = T) #Between the the two mv bouts, count number of frames with speed == 0 (this could be done using the rle object also. Possibly more efficient)
               return(noMov < erroneousMovementDataThreshold)
             }
@@ -301,8 +282,31 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
         }
       }
       mvBouts <- movement$lengths > mvMin & movement$values #Reassigning based on above data processing
-      
       #Get mv lengths etc
+      
+      if(any(mvBouts)){
+        mvBoutsIndexes <- which(mvBouts)
+        for (c in 1:length(mvBoutsIndexes)) { #Length problem
+          if(!is.na(mvBoutsIndexes[c])){
+            #Times after bout index when there is a non-movement bout of more than x return false
+            boutTracking <- movement$values[(mvBoutsIndexes[c]):length(movement$values)] | !movement$values[(mvBoutsIndexes[c]):length(movement$values)] & movement$lengths[(mvBoutsIndexes[c]):length(movement$values)] < 200*hz
+            #Next non-movement bout of greater than x is nextFalseBout units away from the movement bout Index
+            nextFalseBout <- min(which(boutTracking == FALSE))
+            if(nextFalseBout != Inf){
+              if(!is.na(nextFalseBout && nextFalseBout != Inf && (nextFalseBout-2) != 0 && nextFalseBout != 1)){#
+                mergeIndexes <- mvBoutsIndexes[c]:(mvBoutsIndexes[c] + nextFalseBout)
+                movement$lengths[mvBoutsIndexes[c]] = sum(movement$lengths[mergeIndexes])
+                movement$lengths = movement$lengths[-c(mergeIndexes[-1])]
+                movement$values = movement$values[-c(mergeIndexes[-1])]
+              }
+            }
+            mvBouts <- movement$lengths > mvMin & movement$values #Update
+            mvBoutsIndexes <- which(mvBouts)
+          }
+        }
+      
+      #check
+      
       mvLengths <- movement$lengths[mvBouts]
       mvNr <- sum(mvBouts)
       mvBouts.index <- which(mvBouts)
@@ -332,6 +336,13 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
   }
   return(result)
 }
+
+#SAMPLE - Testing code
+#$centroidDist <- NN_NC_cross180425_offspring1.speed_noEmpt_filt06
+#sleepActivity = flies.sleepActivity(centroidDist[1], erroneousMovementDataThreshold = 50, erroneousSleepDataThreshold = 0)
+#plot.highlightBouts(centroidDist[1], sleepActivity, hz = 5, plots = "movement", start = 2400, end = 2500, flyNumber = 1)
+
+
 
 plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flies.sleepActivity(centroidDist = as.data.frame(centroidDist), erroneousMovementDataThreshold = 2, erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both"){
   #timeScale('h', 'm' or 's') gives timescale of plotting. Default is 's'
