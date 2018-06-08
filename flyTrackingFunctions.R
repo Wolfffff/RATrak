@@ -157,7 +157,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
   for(i in 1:length(centroidDist.mov)){
     movement <- centroidDist.mov[[i]]
     
-    #Sleep and Death
+    ##### Sleep and Death #####
     sleep <- movement$lengths > sleepMin & !movement$values # if streak length > sleepThreshold AND streak value == F (no movement), the fly is sleeping or dead
     if(any(sleep) & length(movement$lengths) > emptyWellThreshold){
       sleepIndexes <- which(sleep)
@@ -243,79 +243,58 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
       sleepStartTimes <- NA
     }
     
-    
-    
-    
-    
-    
-    #Bouts of movement
-    
       
-      #Merge bouts that are separated by a non movement < erroneousMovementDataThreshold
-      mvBoutsQC = sapply(
-        1:(length(mvBoutsIndexes) - 1),
-        FUN = function(x) {
-          if (x > 0) {
-            if (!is.na(mvBoutsIndexes[x]) && sum(movement$lengths[1:mvBoutsIndexes[x]], na.rm = TRUE) != sum(movement$lengths)) {
-              from <- sum(movement$lengths[1:mvBoutsIndexes[x]])
-              to <- sum(movement$lengths[1:(mvBoutsIndexes[x + 1] - 1)])
-
-              #This is a problematic line along with the mirrored version in sleep
-              noMov <- sum(centroidDist[from:to, i] == 0, na.rm = T) #Between the the two mv bouts, count number of frames with speed == 0 (this could be done using the rle object also. Possibly more efficient)
-              return(noMov < erroneousMovementDataThreshold)
-            }
-          }
-        }
-      )
-      for (s in 1:length(mvBoutsQC)) {
-        if (!is.null(mvBoutsQC[[s]])){
-          if (mvBoutsQC[s]) {
-            #Merge movement bouts
-            movement$lengths[mvBoutsIndexes[s]] = sum(movement$lengths[ mvBoutsIndexes[s]:mvBoutsIndexes[s+1] ])
-            rmIndexes <- (mvBoutsIndexes[s] + 1):mvBoutsIndexes[s+1]
-            movement$lengths = movement$lengths[-rmIndexes]
-            movement$values = movement$values[-rmIndexes]
-            
-            #Update mvBoutsIndexes
-            mvBoutsIndexes[(s+1):length(mvBoutsIndexes)] <- mvBoutsIndexes[(s+1):length(mvBoutsIndexes)] - length(rmIndexes)
-          }
-        }
-      }
-      mvBouts <- movement$lengths > mvMin & movement$values #Reassigning based on above data processing
-      #Get mv lengths etc
-      
+    ##### Movement Bouts #####
+    mvBouts <- movement$lengths > mvMin & movement$values
       if(any(mvBouts)){
         mvBoutsIndexes <- which(mvBouts)
-        for (c in 1:length(mvBoutsIndexes)) { #Length problem
-          if(!is.na(mvBoutsIndexes[c])){
-            #Times after bout index when there is a non-movement bout of more than x return false
-            boutTracking <- movement$values[(mvBoutsIndexes[c]):length(movement$values)] | !movement$values[(mvBoutsIndexes[c]):length(movement$values)] & movement$lengths[(mvBoutsIndexes[c]):length(movement$values)] < 200*hz
-            #Next non-movement bout of greater than x is nextFalseBout units away from the movement bout Index
-            nextFalseBout <- min(which(boutTracking == FALSE))
-            if(nextFalseBout != Inf){
-              if(!is.na(nextFalseBout && nextFalseBout != Inf && (nextFalseBout-2) != 0 && nextFalseBout != 1)){#
-                mergeIndexes <- mvBoutsIndexes[c]:(mvBoutsIndexes[c] + nextFalseBout)
-                movement$lengths[mvBoutsIndexes[c]] = sum(movement$lengths[mergeIndexes])
-                movement$lengths = movement$lengths[-c(mergeIndexes[-1])]
-                movement$values = movement$values[-c(mergeIndexes[-1])]
+
+        #Extend movement bouts across periods of non-movement < erroneousMovementDataThreshold
+        if(erroneousMovementDataThreshold > 0){
+          c <- 1
+          while(c <= length(mvBoutsIndexes)) { 
+            if(!is.na(mvBoutsIndexes[c])){
+              #Times after bout index when there is a non-movement bout of more than x return false
+              boutTracking <- movement$values[(mvBoutsIndexes[c]):length(movement$values)]  |                     #Either they're moving
+                !movement$values[(mvBoutsIndexes[c]):length(movement$values)]  &                                  #Or being still
+                movement$lengths[(mvBoutsIndexes[c]):length(movement$values)] < erroneousMovementDataThreshold*hz #For less than
+              
+              #Next non-movement bout of greater than x is nextFalseBout units away from the movement bout Index
+              # nextFalseBout <- tryCatch(expr = min(which(boutTracking == FALSE)), error=function(e) e, warning=function(w) w)
+              # if(class(nextFalseBout) != 'integer')
+              #   stop(paste('i =', i, ', c =', c))
+              if(all(boutTracking)) #All True => everything up until the end of the experiment is a movement bout
+                nextFalseBout <- length(boutTracking) - 1
+              else
+                nextFalseBout <- min(which(!boutTracking))
+              
+              if(nextFalseBout != Inf){
+                if(!is.na(nextFalseBout && nextFalseBout != Inf && (nextFalseBout-2) != 0 && nextFalseBout != 1)){#
+                  mergeIndexes <- mvBoutsIndexes[c]:(mvBoutsIndexes[c] + nextFalseBout)
+                  movement$lengths[mvBoutsIndexes[c]] = sum(movement$lengths[mergeIndexes])
+                  movement$lengths = movement$lengths[-c(mergeIndexes[-1])]
+                  movement$values = movement$values[-c(mergeIndexes[-1])]
+                }
               }
+              
+              #Update
+              mvBouts <- movement$lengths > mvMin & movement$values 
+              mvBoutsIndexes <- which(mvBouts)
+              
+              c <- c+1
             }
-            mvBouts <- movement$lengths > mvMin & movement$values #Update
-            mvBoutsIndexes <- which(mvBouts)
           }
-        }
+        } 
       
-      #check
-      
+      #Get mv lengths, start times etc
       mvLengths <- movement$lengths[mvBouts]
       mvNr <- sum(mvBouts)
-      mvBouts.index <- which(mvBouts)
-      if(mvBouts.index[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
-        mvStartTimes <- sapply(mvBouts.index[-1], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
+      if(mvBoutsIndexes[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
+        mvStartTimes <- sapply(mvBoutsIndexes[-1], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
         mvStartTimes <- c(1, mvStartTimes)
       }
       else{
-        mvStartTimes <- sapply(mvBouts.index, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
+        mvStartTimes <- sapply(mvBoutsIndexes, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
       }
       mvEndTimes <- sapply(which(mvBouts), function(x){ sum(movement$lengths[1:x]) } ) 
       #Get the average speed in every bout
