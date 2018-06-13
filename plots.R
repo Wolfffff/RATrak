@@ -283,18 +283,18 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
     points(t, centroidDist.avg[,i], type = 'l', ylim = c(0, max(centroidDist.avg)), col = cols[i], lty = ltys[i])
   }
   if(is.na(title))
-    title(paste('Movement during', round(tail(t, 1), digits = 4), time), cex.main = 2)
+    title(paste('Speed during', round(tail(t, 1), digits = 4), time), cex.main = 2)
   else
     title(title, cex.main = 2)
   
   mtext(paste('Time (', time, ')', sep = ''), side = 1, cex = 2, line = 3)
-  mtext('Distance traveled per window', side = 2, cex = 2, line = 2)
+  mtext('Average speed per window', side = 2, cex = 2, line = 2)
   
   #Legends
   if(!is.na(treatmentLevels[1]))
-    legend('bottomleft', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
+    legend('topright', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
   if(!is.na(sex[1]))
-    legend('bottom', c('Male', 'Female'), lty = 2:1, cex = 2)  
+    legend('top', c('Male', 'Female'), lty = 2:1, cex = 2)  
 }
 
 
