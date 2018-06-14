@@ -151,7 +151,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
       #Get the average speed in every bout
       boutSpeeds <- rep(NA, length(mvStartTimes))
       for (t in 1:length(mvStartTimes)) {
-        boutSpeeds[t] <- mean(centroidDist[mvStartTimes[t]:mvEndTimes[t], i])
+        boutSpeeds[t] <- mean(centroidDist[mvStartTimes[t]:mvEndTimes[t], i], na.rm = T)
       }
     }
     else{
@@ -168,7 +168,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
 }
 
 
-#LinearModel
+#Get p-value from a LinearModel
 lmp <- function (modelobject) {
   if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
   f <- summary(modelobject)$fstatistic
