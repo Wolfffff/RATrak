@@ -321,7 +321,7 @@ plot.flyMovement_plate <- function(centroidDist, nCols = 10, colRange = c("blue"
 
 
 
-plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flies.sleepActivity(centroidDist = as.data.frame(centroidDist), erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both"){
+plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flies.sleepActivity(centroidDist = as.data.frame(centroidDist), erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both", ...){
   #timeScale('h', 'm' or 's') gives timescale of plotting. Default is 's'
   #start is start time in units of timeScale(e.g. 5 with 'h' is start at hour 5). Default is 1
   #end is end time in units of timeScale as above. Default is 5
@@ -336,20 +336,23 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
   }else{
     plotFactor = hz
   }
-  
-  
   start <- start*plotFactor
   end <- end*plotFactor
   s <- 1:nrow(centroidDist)/plotFactor
   
+  #Additional arguments?
+  arg <- list(...)
+  
   if(plots == "both"){
+    if(any(c('xlab', 'ylab') %in% names(arg)))
+      plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', ...)
+    else
+      plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     
-    plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed')
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
     rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
     #Movement
-    plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed')
     rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
     for(i in 1:length( sleepActivity[[flyNumber]]$mvStartTimes )){
       start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor
@@ -361,7 +364,11 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
     }
   }
   else if(plots == "movement"){
-    plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed')
+    if(any(c('xlab', 'ylab') %in% names(arg)))
+      plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', ...)
+    else
+      plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
+    
     rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
     for(i in 1:length( sleepActivity[[flyNumber]]$mvStartTimes )){
       start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor
@@ -371,7 +378,10 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
     }
   }
   else if(plots == "sleep"){
-    plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed')
+    if(any(c('xlab', 'ylab') %in% names(arg)))
+      plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', ...)
+    else
+      plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
     rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 100))
