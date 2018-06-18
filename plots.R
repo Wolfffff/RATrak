@@ -1,6 +1,7 @@
 #Plots function 
 #plot.flyMv_allFigs - All figures
-#plot.flyMv_rollAvg_grouped
+#plot.flyMv_cumMv - Done
+#plot.flyMv_rollAvg_grouped - Experiment specific, requires treatment, sex, etc
 #plot.flyMovement_plate
 #plot.highlightBouts
 #plot.flyMv_rollNoMov
@@ -65,16 +66,90 @@ plot.flyMv_allFigs <- function(centroidDist, activity, fileBaseName,
 
 
 
+plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', treatmentLevels = NA, title = NA){
+  #Fix for single
+  if(dim(centroidDist)[2] == 1){
+    centroidDist <- as.matrix(centroidDist)
+  }
+  centroidDist.cumDist <- apply(centroidDist, MARGIN = 2, FUN = cumsum)
+  
+  if(time == 'min')
+    t <- 1:nrow(centroidDist)/(hz*60)
+  else if(time == 'h')
+    t <- 1:nrow(centroidDist)/(hz*60^2)
+  else
+    stop('time needs to be \'min\' or \'h\'')
+  
+  #Color for treatment
+  if(!is.na(treatments[1])){
+    # if(is.logical(treatments)){ #Two treatments, indicated by a logival vector
+    #   cols[treatments] <- 'red'
+    #   
+    #   if(is.na(treatmentLevels[1]))
+    #     treatmentLevels <- c('Treatment', 'Control')
+    # }
+    # else if(is.numeric(treatments)){ #Many treatments, indicated by a numeric vector
+    #   cols.palette <- rainbow(length(unique(treatments)))
+    #   tmp <- as.factor(treatments)
+    #   cols <- cols.palette[tmp]
+    #   
+    #   if(is.na(treatmentLevels[1]))
+    #     treatmentLevels <- paste('group', levels(tmp))
+    # }
+    # else{
+    #   stop('treatments needs to be logical (two treatments) or numeric (multiple treatments)')
+  # }
+    
+    cols.palette <- rainbow(length(unique(treatments)))
+    tmp <- as.factor(treatments)
+    cols <- cols.palette[tmp]
+    
+    if(is.na(treatmentLevels[1]))
+      treatmentLevels <- paste('group', levels(tmp))
+  }
+  else
+    cols <- rep('black', ncol(centroidDist))
+  
+  #Line type for sex
+  ltys <- rep(1, ncol(centroidDist))
+  if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
+    ltys[sex] <- 2
+  }
+  plot(t, centroidDist.cumDist[,1], type = 'l', ylim = c(0, max(centroidDist.cumDist)), ylab = '', xlab = '', col = cols[1], lty = ltys[1])
+  
+  if(ncol(centroidDist.cumDist) > 1){
+    for(i in 2:ncol(centroidDist.cumDist)){
+      points(t, centroidDist.cumDist[,i], type = 'l', ylim = c(0, max(centroidDist.cumDist)), col = cols[i], lty = ltys[i])
+    }
+  }
+  if(is.na(title))
+    title(paste('Movement during', round(tail(t, 1), digits = 4), time), cex.main = 2)
+  else
+    title(title, cex.main = 2)
+  
+  mtext(paste('Time (', time, ')', sep = ''), side = 1, cex = 2, line = 3)
+  mtext('Cumulative distance traveled', side = 2, cex = 2, line = 2)
+  
+  #Legends
+  if(!is.na(treatmentLevels[1]))
+    legend('topleft', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
+  if(!is.na(sex[1]))
+    legend('top', c('Male', 'Female'), lty = 2:1, cex = 2)  
+}
+
+
+
 plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', 
                                        treatmentLevels = NA, title = NA, 
                                        width = 5*60^2, by = 5*60*30, sdShading = F, ...){
-  #Function under construction. sd-shading and no treatment not implemented yet
-  if(!require(zoo))
+    #Function under construction. sd-shading and no treatment not implemented yet
+  #TODO - Use loadPackages function rather than this
+   if(!require(zoo))
     stop('Can\'t load package zoo')
   if(!require(data.table))
     stop('Can\'t load package data.table')
-  if(class(centroidDist)[1] != 'data.table')
-    stop('centroidDist need to be of class data.table')
+  #if(class(centroidDist)[1] != 'data.table')
+   # stop('centroidDist need to be of class data.table')
   if(sdShading & !require(matrixStats))
     stop('Can\'t load package matrixStats')
   if(sdShading & !require(ggplot2))
@@ -85,7 +160,6 @@ plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, 
     framesPerTime <- hz*60^2
   else
     stop('time needs to be \'min\' or \'h\'')
-  
   #Average by treatment and sex
   if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
     if(!is.na(treatments[1])){
@@ -113,6 +187,7 @@ plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, 
     }
     #else ...
   }
+  #TODO-SWW split else statements for dealing with both cases of sex and treatment
   
   if(!is.na(width) & !is.na(by)){ #Average sliding windows as given by 'width' and 'by'
     centroidDist.avg <- rollapply(data = centroidDist.groupAvg, width = width, FUN = mean, by.column = T, by = by, ...)
@@ -177,71 +252,6 @@ plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, 
 
 
 
-plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', treatmentLevels = NA, title = NA){
-  centroidDist.cumDist <- apply(centroidDist, MARGIN = 2, FUN = cumsum)
-  
-  if(time == 'min')
-    t <- 1:nrow(centroidDist)/(hz*60)
-  else if(time == 'h')
-    t <- 1:nrow(centroidDist)/(hz*60^2)
-  else
-    stop('time needs to be \'min\' or \'h\'')
-  
-  #Color for treatment
-  if(!is.na(treatments[1])){
-    # if(is.logical(treatments)){ #Two treatments, indicated by a logival vector
-    #   cols[treatments] <- 'red'
-    #   
-    #   if(is.na(treatmentLevels[1]))
-    #     treatmentLevels <- c('Treatment', 'Control')
-    # }
-    # else if(is.numeric(treatments)){ #Many treatments, indicated by a numeric vector
-    #   cols.palette <- rainbow(length(unique(treatments)))
-    #   tmp <- as.factor(treatments)
-    #   cols <- cols.palette[tmp]
-    #   
-    #   if(is.na(treatmentLevels[1]))
-    #     treatmentLevels <- paste('group', levels(tmp))
-    # }
-    # else
-    #   stop('treatments needs to be logical (two treatments) or numeric (multiple treatments)')
-    
-    cols.palette <- rainbow(length(unique(treatments)))
-    tmp <- as.factor(treatments)
-    cols <- cols.palette[tmp]
-    
-    if(is.na(treatmentLevels[1]))
-      treatmentLevels <- paste('group', levels(tmp))
-  }
-  else
-    cols <- rep('black', ncol(centroidDist))
-  
-  #Line type for sex
-  ltys <- rep(1, ncol(centroidDist))
-  if(!is.na(sex[1])) #Assumes sex = logical vector. T == male
-    ltys[sex] <- 2
-  
-  plot(t, centroidDist.cumDist[,1], type = 'l', ylim = c(0, max(centroidDist.cumDist)), ylab = '', xlab = '', col = cols[1], lty = ltys[1])
-  for(i in 2:ncol(centroidDist.cumDist)){
-    points(t, centroidDist.cumDist[,i], type = 'l', ylim = c(0, max(centroidDist.cumDist)), col = cols[i], lty = ltys[i])
-  }
-  if(is.na(title))
-    title(paste('Movement during', round(tail(t, 1), digits = 4), time), cex.main = 2)
-  else
-    title(title, cex.main = 2)
-  
-  mtext(paste('Time (', time, ')', sep = ''), side = 1, cex = 2, line = 3)
-  mtext('Cumulative distance traveled', side = 2, cex = 2, line = 2)
-  
-  #Legends
-  if(!is.na(treatmentLevels[1]))
-    legend('topleft', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
-  if(!is.na(sex[1]))
-    legend('top', c('Male', 'Female'), lty = 2:1, cex = 2)  
-}
-
-
-
 plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', 
                                treatmentLevels = NA, title = NA, 
                                width = 5*60^2, by = 5*60*30, ...){
@@ -253,8 +263,7 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
     framesPerTime <- hz*60^2
   else
     stop('time needs to be \'min\' or \'h\'')
-  
-  centroidDist.avg <- rollapply(data = centroidDist, width = width, FUN = mean, by.column = T, by = by, ...)
+  centroidDist.avg <- rollapply(data = as.data.frame(centroidDist), width = width, FUN = mean, by.column = T, by = by, ...)
   
   #Create vector with time points matching the averaged windows
   tmp <- 1:nrow(centroidDist)
@@ -302,13 +311,11 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
 plot.flyMovement_plate <- function(centroidDist, nCols = 10, colRange = c("blue", "red")){
   nrWithMov <- apply(centroidDist, 2, FUN = function(x){sum(x != 0)})
   fracWithMov <- nrWithMov/nrow(centroidDist)
-  print(fracWithMov)
   if(ncol(centroidDist) == 91){ #96 well plate
     x <- rep(1:12, 8)
     y <- sort(rep(1:8, 12), decreasing = T)
     pal = colorRampPalette(colRange)
     tmp <- as.numeric(cut(fracWithMov, breaks = seq(0, max(fracWithMov), length.out = nCols))) + 1
-    print(tmp)
     tmp[is.na(tmp)] <- 1
     cols <- c('white', pal(nCols))
     plot(x, y, cex = 5.1, yaxt = 'n', xaxt = 'n', xlab = '', ylab = '')
