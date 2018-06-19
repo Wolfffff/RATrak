@@ -15,7 +15,7 @@ readBinary<- function(fileName, colCount, start = 1, end){
   if(is.null(end)){
     fly <- colCount
   }
-  return(as.matrix(mat[,start:end]))
+  return(as.data.frame(mat[,start:end]))
 }
 
 

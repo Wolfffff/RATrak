@@ -1,8 +1,8 @@
 #Plots function 
 #plot.flyMv_allFigs - All figures
 #plot.flyMv_cumMv - Requires work to identify sexes
-#plot.flyMv_rollAvg - Working
 #plot.flyMv_rollAvg_grouped - Experiment specific, requires treatment, sex, etc
+#plot.flyMv_rollAvg - Working
 #plot.flyMovement_plate
 #plot.highlightBouts
 #plot.flyMv_rollNoMov
@@ -15,7 +15,7 @@
 
 
 
-plot.flyMv_allFigs <- function(centroidDist, activity, fileBaseName, 
+plot.flyMv_allFigs <- function(speed, activity, fileBaseName, 
                                sex = NA, treatments = NA, hz = 5, time = 'min', 
                                treatmentLevels = NA, width = 5*60^2, by = 5*60*30, avgMv = T, noMv = F){ 
   #Wrapper function that produces various figures of fly activity
@@ -23,7 +23,7 @@ plot.flyMv_allFigs <- function(centroidDist, activity, fileBaseName,
   #Cummulative movement 
   file <- paste(fileBaseName, '_cumMv.png', sep = '')
   png(filename = file, width = 1200, height = 800)
-  plot.flyMv_cumMv(centroidDist = centroidDist, sex = sex, 
+  plot.flyMv_cumMv(speed = speed, sex = sex, 
                    treatments = treatments, time = time, treatmentLevels = treatmentLevels, hz = hz)
   dev.off()
   
@@ -50,7 +50,7 @@ plot.flyMv_allFigs <- function(centroidDist, activity, fileBaseName,
   if(avgMv){
     file <- paste(fileBaseName, '_avgMvPerWindow.png', sep = '')
     png(filename = file, width = 1200, height = 800)
-    plot.flyMv_rollAvg(centroidDist = centroidDist, sex = sex, 
+    plot.flyMv_rollAvg(speed = speed, sex = sex, 
                        treatments = treatments, time = time, treatmentLevels = treatmentLevels, width = width, by = by, hz = hz)
     dev.off()
   }
@@ -59,7 +59,7 @@ plot.flyMv_allFigs <- function(centroidDist, activity, fileBaseName,
   if(noMv){
     file <- paste(fileBaseName, '_fracNoMvPerWindow.png', sep = '')
     png(filename = file, width = 1200, height = 800)
-    plot.flyMv_rollNoMov(centroidDist = centroidDist, sex = sex, 
+    plot.flyMv_rollNoMov(speed = speed, sex = sex, 
                          treatments = treatments, time = time, treatmentLevels = treatmentLevels, width = width, by = by, hz = hz)
     dev.off()
   }
@@ -67,13 +67,13 @@ plot.flyMv_allFigs <- function(centroidDist, activity, fileBaseName,
 
 
 #Note: Data points are too dense for lty's to do anything
-plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', treatmentLevels = NA, title = NA){
-  centroidDist.cumDist <- apply(centroidDist, MARGIN = 2, FUN = cumsum)
+plot.flyMv_cumMv <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', treatmentLevels = NA, title = NA){
+  speed.cumDist <- apply(speed, MARGIN = 2, FUN = cumsum)
   
   if(time == 'min')
-    t <- 1:nrow(centroidDist)/(hz*60)
+    t <- 1:nrow(speed)/(hz*60)
   else if(time == 'h')
-    t <- 1:nrow(centroidDist)/(hz*60^2)
+    t <- 1:nrow(speed)/(hz*60^2)
   else
     stop('time needs to be \'min\' or \'h\'')
   
@@ -88,16 +88,16 @@ plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, ti
       treatmentLevels <- paste('group', levels(tmp))
   }
   else
-    cols <- rep('black', ncol(centroidDist))
+    cols <- rep('black', ncol(speed))
   
   #Line type for sex
-  ltys <- rep(1, ncol(centroidDist)) #Lty's don't work because of density.
+  ltys <- rep(2, ncol(speed)) #Lty's don't work because of density.
   if(!is.na(sex[1])) #Assumes sex = logical vector. T == male
-    ltys[sex] <- 2
+    ltys[sex] <- 1
   
-  plot(t, centroidDist.cumDist[,1], type = 'l', ylim = c(0, max(centroidDist.cumDist)), ylab = '', xlab = '', col = cols[1],lty = ltys[1], lwd = ltys[1])
-  for(i in 2:ncol(centroidDist.cumDist)){
-    points(t, centroidDist.cumDist[,i], type = 'l', ylim = c(0, max(centroidDist.cumDist)), col = cols[i], lty = ltys[i], lwd = ltys[i])
+  plot(t, speed.cumDist[,1], type = 'l', ylim = c(0, max(speed.cumDist)), ylab = '', xlab = '', col = cols[1],lty = ltys[1], lwd = ltys[1])
+  for(i in 2:ncol(speed.cumDist)){
+    points(t, speed.cumDist[,i], type = 'l', ylim = c(0, max(speed.cumDist)), col = cols[i], lty = ltys[i], lwd = ltys[i])
   }
   if(is.na(title))
     title(paste('Movement during', round(tail(t, 1), digits = 4), time), cex.main = 2)
@@ -111,26 +111,19 @@ plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, ti
   if(!is.na(treatmentLevels[1]))
     legend('topleft', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
   if(!is.na(sex[1]))
-    legend('top', c('Male', 'Female'), lwd = 2:1, cex = 2)  
+    legend('top', c('Male', 'Female'), lwd = 1:2, cex = 2)  
 }
 
 
 
-plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', 
+plot.flyMv_rollAvg_grouped <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', 
                                        treatmentLevels = NA, title = NA, 
                                        width = 5*60^2, by = 5*60*30, sdShading = F, ...){
-    #Function under construction. sd-shading and no treatment not implemented yet
-  #TODO - Use loadPackages function rather than this
-   if(!require(zoo))
-    stop('Can\'t load package zoo')
-  if(!require(data.table))
-    stop('Can\'t load package data.table')
-  #if(class(centroidDist)[1] != 'data.table')
-   # stop('centroidDist need to be of class data.table')
-  if(sdShading & !require(matrixStats))
-    stop('Can\'t load package matrixStats')
-  if(sdShading & !require(ggplot2))
-    stop('Can\'t load package ggplot2')
+    
+  
+  #Function under construction. sd-shading and no treatment not implemented yet
+  #if(class(speed)[1] != 'data.table')
+   # stop('speed need to be of class data.table')
   if(time == 'min')
     framesPerTime <- hz*60
   else if(time == 'h')
@@ -138,48 +131,24 @@ plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, 
   else
     stop('time needs to be \'min\' or \'h\'')
   #Average by treatment and sex
-  if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
-    if(!is.na(treatments[1])){
-      treatments.uniq <- unique(treatments)
-      nTreatments <- length(treatments.uniq)
-      centroidDist.groupAvg <- as.data.frame(matrix(nrow = nrow(centroidDist), ncol = 2*nTreatments))
-      
-      #centroidDist.groupAvg will be organized as: 
-      # - column 1 TO nTreatments = males in each treatment
-      # - column nTreatments + 1 TO 2*nTreatments = females in each treatment
-      for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
-        centroidDist.groupAvg[,i] <- rowMeans(centroidDist[, treatments == treatments.uniq[i] & sex, with = F]) #males
-        centroidDist.groupAvg[,i + nTreatments] <- rowMeans(centroidDist[, treatments == treatments.uniq[i] & !sex, with = F]) #females
-      }
-      
-      #Calculate SDs of the above means
-      if(sdShading){
-        centroidDist.groupSD <- as.data.frame(matrix(nrow = nrow(centroidDist), ncol = 2*nTreatments))
-        
-        for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
-          centroidDist.groupSD[,i] <- rowSds(as.matrix(centroidDist[, treatments == treatments.uniq[i] & sex, with = F])) #males
-          centroidDist.groupSD[,i + nTreatments] <- rowSds(as.matrix(centroidDist[, treatments == treatments.uniq[i] & !sex, with = F])) #females
-        }
-      }
-    }
-    #else ...
-  }
+ 
+   
   #TODO-SWW split else statements for dealing with both cases of sex and treatment
   
   if(!is.na(width) & !is.na(by)){ #Average sliding windows as given by 'width' and 'by'
-    centroidDist.avg <- rollapply(data = centroidDist.groupAvg, width = width, FUN = mean, by.column = T, by = by, ...)
+    speed.avg <- rollapply(data = speed.groupAvg, width = width, FUN = mean, by.column = T, by = by, ...)
     
     #Create vector with time points matching the averaged windows
-    tmp <- 1:nrow(centroidDist)
-    t <- tmp[seq(1, nrow(centroidDist) - (width - 1), by)]/framesPerTime
+    tmp <- 1:nrow(speed)
+    t <- tmp[seq(1, nrow(speed) - (width - 1), by)]/framesPerTime
   }
   else{ #No sliding window
-    centroidDist.avg <- centroidDist.groupAvg
-    rm(centroidDist.groupAvg)
+    speed.avg <- speed.groupAvg
+    rm(speed.groupAvg)
     gc()
     
     #Time vector
-    t <- (1:nrow(centroidDist))/framesPerTime
+    t <- (1:nrow(speed))/framesPerTime
   }
   
   #Color for treatment
@@ -192,25 +161,46 @@ plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, 
     # treatmentLevels <- paste('group', unique(treatments))
   }
   else
-    cols <- rep('black', ncol(centroidDist))
+    #TODO - Cols for sexes w/o treatment
+    cols <- rep('black', ncol(speed))
   
   #Line type for sex
   if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
     if(!is.na(treatments[1]))
-      ltys <- c(rep(2, nTreatments), rep(1, nTreatments))
-    #else ...
+      ltys <- c(rep(1, nTreatments), rep(2, nTreatments))
+    else{
+      #
+      ltys <- c(1,2)
+    }
+  }
+  else{
+    ltys<- rep(1,nTreatments)
   }
   
   if(sdShading){
     #Modified from https://stackoverflow.com/questions/29743503/how-to-add-shaded-confidence-intervals-to-line-plot-with-specified-values/29747072
-    p <- ggplot(data=data, aes(x=interval, y=OR, colour=Drug)) + geom_point() + geom_line()
-    
+    ids <- as.data.frame(seq_along(speed.groupAvg[,1]))
+    temp <- merge(ids, speed.groupAvg[,1])
+    p <- ggplot(data=,aes(x=V1, y=V2)) + geom_point() + geom_line()
+    #p <-p+geom_ribbon(aes(ymin=(speed.groupAvg[,1] - speed.groupSD[,1]), ymax=(speed.groupAvg[,1] - speed.groupSD[,1])), linetype=2, alpha=0.1)
+    p
   }
+  #Sex => male = 1, female = 1
   else{
-    plot(t, centroidDist.avg[,1], type = 'l', ylim = c(0, max(centroidDist.avg, na.rm = T)), ylab = '', xlab = '', col = cols[1], lty = ltys[1], lwd = 2)
-    for(i in 2:ncol(centroidDist.avg)){
-      points(t, centroidDist.avg[,i], type = 'l', ylim = c(0, max(centroidDist.avg, na.rm = T)), col = cols[i], lty = ltys[i], lwd = 2)
+    plot(t, speed.avg[,1], type = 'l', ylim = c(0, max(speed.avg, na.rm = T)), ylab = '', xlab = '', col = cols[1], lty = ltys[1], lwd = 2)
+    print(ltys)
+    
+    for(i in 2:ncol(speed.avg)){
+      points(t, speed.avg[,i], type = 'l', ylim = c(0, max(speed.avg, na.rm = T)), col = cols[i], lty = ltys[i], lwd = 2)
     }
+    #Legends
+    if(!is.na(treatmentLevels[1])){
+      legend(x = 'topright', legend = treatmentLevels, col = cols.palette, cex = 2, pch= 19)
+    }
+    if(!is.na(sex[1])){
+      legend(x = 'top', legend = c('Male', 'Female'), lty = 1:2, cex = 2) 
+    }
+    
     if(is.na(title))
       title(paste('Movement during', round(tail(t, 1), digits = 4), time), cex.main = 2)
     else
@@ -219,32 +209,29 @@ plot.flyMv_rollAvg_grouped <- function(centroidDist, sex = NA, treatments = NA, 
     mtext(paste('Time (', time, ')', sep = ''), side = 1, cex = 2, line = 3)
     mtext('Distance traveled per window', side = 2, cex = 2, line = 2)
     
-    #Legends
-    if(!is.na(treatmentLevels[1]))
-      legend('topright', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
-    if(!is.na(sex[1]))
-      legend('top', c('Male', 'Female'), lty = 2:1, cex = 2, lwd = 2)  
+     
   }
 }
 
 
 
-plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', 
+plot.flyMv_rollAvg <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', 
                                treatmentLevels = NA, title = NA, 
                                width = 5*60^2, by = 5*60*30, ...){
-  if(!require(zoo))
-    stop('Can\'t load package zoo')
-  if(time == 'min')
+  if(time == 'min'){
     framesPerTime <- hz*60
-  else if(time == 'h')
+  }
+  else if(time == 'h'){
     framesPerTime <- hz*60^2
-  else
+  }
+  else{
     stop('time needs to be \'min\' or \'h\'')
-  centroidDist.avg <- rollapply(data = as.data.frame(centroidDist), width = width, FUN = mean, by.column = T, by = by, ...)
+  }
+  speed.avg <- rollapply(data = as.data.frame(speed), width = width, FUN = mean, by.column = T, by = by, ...)
   
   #Create vector with time points matching the averaged windows
-  tmp <- 1:nrow(centroidDist)
-  t <- tmp[seq(1, nrow(centroidDist) - (width - 1), by)]/framesPerTime
+  tmp <- 1:nrow(speed)
+  t <- tmp[seq(1, nrow(speed) - (width - 1), by)]/framesPerTime
   
   #Color for treatment
   if(!is.na(treatments[1])){
@@ -255,23 +242,26 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
     if(is.na(treatmentLevels[1]))
       treatmentLevels <- paste('group', levels(tmp))
   }
-  else
-    cols <- rep('black', ncol(centroidDist))
-  
+  else{
+    cols <- rep('black', ncol(speed))
+  }
   
   #Line type for sex
-  ltys <- rep(1, ncol(centroidDist))
-  if(!is.na(sex[1])) #Assumes sex = logical vector. T == male
+  ltys <- rep(1, ncol(speed))
+  if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
     ltys[sex] <- 2
-  
-  plot(t, centroidDist.avg[,1], type = 'l', ylim = c(0, max(centroidDist.avg)), ylab = '', xlab = '', col = cols[1], lty = ltys[1])
-  for(i in 2:ncol(centroidDist.avg)){
-    points(t, centroidDist.avg[,i], type = 'l', ylim = c(0, max(centroidDist.avg)), col = cols[i], lty = ltys[i])
   }
-  if(is.na(title))
+  
+  plot(t, speed.avg[,1], type = 'l', ylim = c(0, max(speed.avg)), ylab = '', xlab = '', col = cols[1], lty = ltys[1])
+  for(i in 2:ncol(speed.avg)){
+    points(t, speed.avg[,i], type = 'l', ylim = c(0, max(speed.avg)), col = cols[i], lty = ltys[i])
+  }
+  if(is.na(title)){
     title(paste('Speed during', round(tail(t, 1), digits = 4), time), cex.main = 2)
-  else
+  }
+  else{
     title(title, cex.main = 2)
+  }
   
   mtext(paste('Time (', time, ')', sep = ''), side = 1, cex = 2, line = 3)
   mtext('Average speed per window', side = 2, cex = 2, line = 2)
@@ -285,10 +275,10 @@ plot.flyMv_rollAvg <- function(centroidDist, sex = NA, treatments = NA, hz = 5, 
 
 
 
-plot.flyMovement_plate <- function(centroidDist, nCols = 10, colRange = c("blue", "red")){
-  nrWithMov <- apply(centroidDist, 2, FUN = function(x){sum(x != 0)})
-  fracWithMov <- nrWithMov/nrow(centroidDist)
-  if(ncol(centroidDist) == 91){ #96 well plate
+plot.flyMovement_plate <- function(speed, nCols = 10, colRange = c("blue", "red")){
+  nrWithMov <- apply(speed, 2, FUN = function(x){sum(x != 0)})
+  fracWithMov <- nrWithMov/nrow(speed)
+  if(ncol(speed) == 91){ #96 well plate
     x <- rep(1:12, 8)
     y <- sort(rep(1:8, 12), decreasing = T)
     pal = colorRampPalette(colRange)
@@ -305,7 +295,7 @@ plot.flyMovement_plate <- function(centroidDist, nCols = 10, colRange = c("blue"
 
 
 
-plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flies.sleepActivity(centroidDist = as.data.frame(centroidDist), erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both", ...){
+plot.highlightBouts <- function(speed = speed,sleepActivity = flies.sleepActivity(speed = as.data.frame(speed), erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both", ...){
   #timeScale('h', 'm' or 's') gives timescale of plotting. Default is 's'
   #start is start time in units of timeScale(e.g. 5 with 'h' is start at hour 5). Default is 1
   #end is end time in units of timeScale as above. Default is 5
@@ -322,16 +312,16 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
   }
   start <- start*plotFactor
   end <- end*plotFactor
-  s <- 1:nrow(centroidDist)/plotFactor
+  s <- 1:nrow(speed)/plotFactor
   
   #Additional arguments?
   arg <- list(...)
   
   if(plots == "both"){
     if(any(c('xlab', 'ylab') %in% names(arg)))
-      plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', ...)
+      plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', ...)
     else
-      plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
+      plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
@@ -349,9 +339,9 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
   }
   else if(plots == "movement"){
     if(any(c('xlab', 'ylab') %in% names(arg)))
-      plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', ...)
+      plot(s[start:end], speed[[flyNumber]][start:end], type = 'l', ...)
     else
-      plot(s[start:end], centroidDist[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
+      plot(s[start:end], speed[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     
     rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
     for(i in 1:length( sleepActivity[[flyNumber]]$mvStartTimes )){
@@ -363,9 +353,9 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
   }
   else if(plots == "sleep"){
     if(any(c('xlab', 'ylab') %in% names(arg)))
-      plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', ...)
+      plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', ...)
     else
-      plot(s[start:end], as.data.frame(centroidDist)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
+      plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
     rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 100))
@@ -374,7 +364,7 @@ plot.highlightBouts <- function(centroidDist = centroidDist,sleepActivity = flie
 
 
 
-plot.flyMv_rollNoMov <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', 
+plot.flyMv_rollNoMov <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', 
                                  treatmentLevels = NA, title = NA, 
                                  width, by = 1, ...){
   if(!require(zoo))
@@ -386,11 +376,11 @@ plot.flyMv_rollNoMov <- function(centroidDist, sex = NA, treatments = NA, hz = 5
   else
     stop('time needs to be \'min\' or \'h\'')
   
-  centroidDist.avg <- rollapply(data = centroidDist, width = width, FUN = function(x){sum(x == 0)/width}, by.column = T, by = by, ...)
+  speed.avg <- rollapply(data = speed, width = width, FUN = function(x){sum(x == 0)/width}, by.column = T, by = by, ...)
   
   #Create vector with time points matching the averaged windows
-  tmp <- 1:nrow(centroidDist)
-  t <- tmp[seq(1, nrow(centroidDist) - (width - 1), by)]/framesPerTime
+  tmp <- 1:nrow(speed)
+  t <- tmp[seq(1, nrow(speed) - (width - 1), by)]/framesPerTime
   
   #Color for treatment
   if(!is.na(treatments[1])){
@@ -402,16 +392,16 @@ plot.flyMv_rollNoMov <- function(centroidDist, sex = NA, treatments = NA, hz = 5
       treatmentLevels <- paste('group', levels(tmp))
   }
   else
-    cols <- rep('black', ncol(centroidDist))
+    cols <- rep('black', ncol(speed))
   
   #Line type for sex
-  ltys <- rep(1, ncol(centroidDist))
+  ltys <- rep(1, ncol(speed))
   if(!is.na(sex[1])) #Assumes sex = logical vector. T == male
     ltys[sex] <- 2
   
-  plot(t, centroidDist.avg[,1], type = 'l', ylim = c(0, max(centroidDist.avg)), ylab = '', xlab = '', col = cols[1], lty = ltys[1])
-  for(i in 2:ncol(centroidDist.avg)){
-    points(t, centroidDist.avg[,i], type = 'l', ylim = c(0, max(centroidDist.avg)), col = cols[i], lty = ltys[i])
+  plot(t, speed.avg[,1], type = 'l', ylim = c(0, max(speed.avg)), ylab = '', xlab = '', col = cols[1], lty = ltys[1])
+  for(i in 2:ncol(speed.avg)){
+    points(t, speed.avg[,i], type = 'l', ylim = c(0, max(speed.avg)), col = cols[i], lty = ltys[i])
   }
   if(is.na(title))
     title(paste('Sleep during', round(tail(t, 1), digits = 4), time), cex.main = 2)
@@ -467,7 +457,7 @@ plot.flyMv_survival <- function(activity, treatments = NA, time = 'h', hz = 5, t
     # treatmentLevels <- paste('group', levels(tmp))
   }
   else
-    cols <- rep('black', ncol(centroidDist))
+    cols <- rep('black', ncol(speed))
   
   # plot(t, activity.death_control.surv, type = 'l', xlab = '', ylab = '', lwd = 3)
   # points(t, activity.death_treatment.surv, type = 'l', col = 'red', pch = 1.5, lwd = 3)

@@ -1,12 +1,13 @@
 #Processing matrix data
 #flies.sleepActivity
+#flies.avgByGroup
 #lmp - fit linear model
 #
 #
 #
 
 
-flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 3, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, smoothingFactor = 10){
+flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 3, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, smoothingFactor = 10){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
   #mvThreshold = threshold to call bout of continous movement. Default 2s
@@ -20,11 +21,11 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
   errorMin <- errorThreshold*hz
   
   #Run length encoding of movement > 0, == streaks of movement
-  centroidDist.mov <- apply(centroidDist, MARGIN = 2, FUN = function(x){rle(x > 0)})
+  speed.mov <- apply(speed, MARGIN = 2, FUN = function(x){rle(x > 0)})
   
   result <- list()
-  for(i in 1:length(centroidDist.mov)){
-    movement <- centroidDist.mov[[i]]
+  for(i in 1:length(speed.mov)){
+    movement <- speed.mov[[i]]
     
     ##### Sleep and Death #####
     sleep <- movement$lengths > sleepMin & !movement$values # if streak length > sleepThreshold AND streak value == F (no movement), the fly is sleeping or dead
@@ -50,7 +51,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
             if (sum(movement$lengths[1:sleepIndexes[x]]) != sum(movement$lengths)) {
               from <- sum(movement$lengths[1:sleepIndexes[x]])
               to <- sum(movement$lengths[1:(sleepIndexes[x + 1] - 1)])
-              return(sum(centroidDist[from:to, i], na.rm = T) > erroneousSleepDataThreshold)
+              return(sum(speed[from:to, i], na.rm = T) > erroneousSleepDataThreshold)
             }
           }
         )
@@ -151,7 +152,7 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
       #Get the average speed in every bout
       boutSpeeds <- rep(NA, length(mvStartTimes))
       for (t in 1:length(mvStartTimes)) {
-        boutSpeeds[t] <- mean(centroidDist[mvStartTimes[t]:mvEndTimes[t], i], na.rm = T)
+        boutSpeeds[t] <- mean(speed[mvStartTimes[t]:mvEndTimes[t], i], na.rm = T)
       }
     }
     else{
@@ -166,6 +167,70 @@ flies.sleepActivity <- function(centroidDist, sleepThreshold = 5*60, deathThresh
   }
   return(result)
 }
+
+
+
+flies.avgByGroup <- function(speed, sex, treatment) {
+  
+  if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
+    if(!is.na(treatments[1])){
+      
+      treatments.uniq <- unique(treatments)
+      nTreatments <- length(treatments.uniq)
+      speed.groupAvg <- as.data.frame(matrix(nrow = nrow(speed), ncol = 2*nTreatments))
+      
+      #speed.groupAvg will be organized as: 
+      # - column 1 TO nTreatments = males in each treatment
+      # - column nTreatments + 1 TO 2*nTreatments = females in each treatment
+      groupedTreatments = c(NA) #First elements to NA to keep NA checks false until populated
+      groupedSex <- c(NA)
+      for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
+        #males
+        speed.groupAvg[,i] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] & sex]))
+        groupedSex[i] = TRUE
+        groupedTreatments[i] = as.character(treatments.uniq[i])
+        
+        #females
+        speed.groupAvg[,i + nTreatments] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] & !sex]))
+        groupedSex[i+nTreatments] = FALSE
+        groupedTreatments[i+nTreatments] = as.character(treatments.uniq[i])
+      }
+      
+      #Calculate SDs of the above means - Not implemented
+      # if(sdShading){
+      #   speed.groupSD <- as.data.frame(matrix(nrow = nrow(speed), ncol = 2*nTreatments))
+      #   
+      #   for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
+      #     speed.groupSD[,i] <- rowSds(as.matrix(speed[, treatments == treatments.uniq[i] & sex])) #males
+      #     speed.groupSD[,i + nTreatments] <- rowSds(as.matrix(speed[, treatments == treatments.uniq[i] & !sex])) #females
+      #   }
+      # }
+    }
+    #Just sex
+    else{
+      groupedSex <- c(1,2) #Male & female
+      speed.groupAvg <- as.data.frame(matrix(nrow = nrow(speed), ncol = 2))
+      
+      #Direct grouping by sex metadata as passed in
+      speed.groupAvg[,1] <- rowMeans(as.matrix(speed[, sex])) #males
+      speed.groupAvg[,2] <- rowMeans(as.matrix(speed[, !sex])) #females
+      
+    }
+  }
+  #Just treatments - no sex
+  else if(!is.na(treatments[1])) {
+    treatments.uniq <- unique(treatments)
+    nTreatments <- length(treatments.uniq)
+    speed.groupAvg <- matrix(nrow = nrow(speed), ncol = nTreatments)
+    #All in treatment group to group
+    for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
+      groupedSex[i] = treatments.uniq[i]
+      speed.groupAvg[,i] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i]])) 
+    }
+  }
+  return(list("speed" = speed.groupAvg, "sex" = as.vector(groupedSex), "treatments" = as.vector(groupedTreatments)))
+}
+
 
 
 #Get p-value from a LinearModel
