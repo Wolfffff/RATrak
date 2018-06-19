@@ -9,6 +9,7 @@ loadPackages(c("data.table", "zoo", "matrixStats", "ggplot2", "tidyverse"))
 
 #Read manually created "info" csv containing 
 #metadata <- read.csv("/Users/Wolf/RareTrombone/Resources/info.csv", sep = ',',header = TRUE)
+metadata <- read.csv("/Users/Wolf/RareTrombone/Resources/info.csv", sep = ',',header = TRUE)
 
 #Using only first 10
 #sex <- metadata$Male[1:10]
