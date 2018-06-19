@@ -1,6 +1,7 @@
 #Plots function 
 #plot.flyMv_allFigs - All figures
-#plot.flyMv_cumMv - Done
+#plot.flyMv_cumMv - Requires work to identify sexes
+#plot.flyMv_rollAvg - Working
 #plot.flyMv_rollAvg_grouped - Experiment specific, requires treatment, sex, etc
 #plot.flyMovement_plate
 #plot.highlightBouts
@@ -65,12 +66,8 @@ plot.flyMv_allFigs <- function(centroidDist, activity, fileBaseName,
 }
 
 
-
+#Note: Data points are too dense for lty's to do anything
 plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, time = 'min', treatmentLevels = NA, title = NA){
-  #Fix for single
-  if(dim(centroidDist)[2] == 1){
-    centroidDist <- as.matrix(centroidDist)
-  }
   centroidDist.cumDist <- apply(centroidDist, MARGIN = 2, FUN = cumsum)
   
   if(time == 'min')
@@ -82,26 +79,9 @@ plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, ti
   
   #Color for treatment
   if(!is.na(treatments[1])){
-    # if(is.logical(treatments)){ #Two treatments, indicated by a logival vector
-    #   cols[treatments] <- 'red'
-    #   
-    #   if(is.na(treatmentLevels[1]))
-    #     treatmentLevels <- c('Treatment', 'Control')
-    # }
-    # else if(is.numeric(treatments)){ #Many treatments, indicated by a numeric vector
-    #   cols.palette <- rainbow(length(unique(treatments)))
-    #   tmp <- as.factor(treatments)
-    #   cols <- cols.palette[tmp]
-    #   
-    #   if(is.na(treatmentLevels[1]))
-    #     treatmentLevels <- paste('group', levels(tmp))
-    # }
-    # else{
-    #   stop('treatments needs to be logical (two treatments) or numeric (multiple treatments)')
-  # }
-    
     cols.palette <- rainbow(length(unique(treatments)))
-    tmp <- as.factor(treatments)
+    #Drop levels to keep legend clean
+    tmp <- droplevels(as.factor(treatments))
     cols <- cols.palette[tmp]
     
     if(is.na(treatmentLevels[1]))
@@ -111,16 +91,13 @@ plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, ti
     cols <- rep('black', ncol(centroidDist))
   
   #Line type for sex
-  ltys <- rep(1, ncol(centroidDist))
-  if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
+  ltys <- rep(1, ncol(centroidDist)) #Lty's don't work because of density.
+  if(!is.na(sex[1])) #Assumes sex = logical vector. T == male
     ltys[sex] <- 2
-  }
-  plot(t, centroidDist.cumDist[,1], type = 'l', ylim = c(0, max(centroidDist.cumDist)), ylab = '', xlab = '', col = cols[1], lty = ltys[1])
   
-  if(ncol(centroidDist.cumDist) > 1){
-    for(i in 2:ncol(centroidDist.cumDist)){
-      points(t, centroidDist.cumDist[,i], type = 'l', ylim = c(0, max(centroidDist.cumDist)), col = cols[i], lty = ltys[i])
-    }
+  plot(t, centroidDist.cumDist[,1], type = 'l', ylim = c(0, max(centroidDist.cumDist)), ylab = '', xlab = '', col = cols[1],lty = ltys[1], lwd = ltys[1])
+  for(i in 2:ncol(centroidDist.cumDist)){
+    points(t, centroidDist.cumDist[,i], type = 'l', ylim = c(0, max(centroidDist.cumDist)), col = cols[i], lty = ltys[i], lwd = ltys[i])
   }
   if(is.na(title))
     title(paste('Movement during', round(tail(t, 1), digits = 4), time), cex.main = 2)
@@ -134,7 +111,7 @@ plot.flyMv_cumMv <- function(centroidDist, sex = NA, treatments = NA, hz = 5, ti
   if(!is.na(treatmentLevels[1]))
     legend('topleft', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
   if(!is.na(sex[1]))
-    legend('top', c('Male', 'Female'), lty = 2:1, cex = 2)  
+    legend('top', c('Male', 'Female'), lwd = 2:1, cex = 2)  
 }
 
 

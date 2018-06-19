@@ -25,4 +25,7 @@ loadPackages <- function(names){
   if(length(missingPackages)){
     install.packages(missingPackages)
   }
+  for (pkg in names) {
+    library(pkg,character.only = TRUE)
+  }
 }
