@@ -1,11 +1,12 @@
 #Utility functions
 #readBinary
+#readMetadata
 #loadPackages
 #
 #
 #
 
-readBinary<- function(fileName, colCount, start = 1, end){
+readBinary <- function(fileName, colCount, start = 1, end){
   #readBinary
   
   file <- file(fileName, "rb")
@@ -16,6 +17,12 @@ readBinary<- function(fileName, colCount, start = 1, end){
     fly <- colCount
   }
   return(as.data.frame(mat[,start:end]))
+}
+
+readMetadata <- function(fileName){
+  meta <- read.csv("/Users/Wolf/RareTrombone/Resources/info.csv", sep = ',',header = TRUE)
+  meta$Treatment <- as.vector(meta$Treatment)
+  return(meta)
 }
 
 
