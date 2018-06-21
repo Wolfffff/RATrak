@@ -19,20 +19,20 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
   deadMin <- deathThreshold*hz
   mvMin <- mvThreshold*hz
   errorMin <- errorThreshold*hz
-  
+
   #Run length encoding of movement > 0, == streaks of movement
   speed.mov <- apply(speed, MARGIN = 2, FUN = function(x){rle(x > 0)})
-  
+
   result <- list()
   for(i in 1:length(speed.mov)){
     movement <- speed.mov[[i]]
-    
+
     ##### Sleep and Death #####
     sleep <- movement$lengths > sleepMin & !movement$values # if streak length > sleepThreshold AND streak value == F (no movement), the fly is sleeping or dead
     if(any(sleep) & length(movement$lengths) > emptyWellThreshold){
       sleepIndexes <- which(sleep)
-      
-      
+
+
       #Checking if any flies moved after being still > errorMin
       for (x in sleepIndexes) {
         if(movement$lengths[x] > errorMin){
@@ -42,7 +42,7 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
           }
         }
       }
-      
+
       #Merge sleep bouts that are separated by movement < erroneousSleepDataThreshold
       if(length(sleepIndexes) > 1){
         sleepQC = sapply(
@@ -63,23 +63,23 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
               rmIndexes <- (sleepIndexes[s] + 1):sleepIndexes[s+1]
               movement$lengths = movement$lengths[-rmIndexes]
               movement$values = movement$values[-rmIndexes]
-              
+
               #Update sleepIndexes
               sleepIndexes[(s+1):length(sleepIndexes)] <- sleepIndexes[(s+1):length(sleepIndexes)] - length(rmIndexes)
             }
           }
         }
         #Redefine with updated movement from above code
-        sleep <- movement$lengths > sleepMin & !movement$values 
+        sleep <- movement$lengths > sleepMin & !movement$values
         sleepIndexes <- which(sleep)
       }
-      
-      
-      
+
+
+
       lastNoMov <- sleepIndexes[length(sleepIndexes)]
       if(movement$lengths[lastNoMov] > deadMin & all(!movement$values[lastNoMov:length(sleep)])){ #If the last recorded no movement bout is > deadMin AND no movement after that point
         dead <- sum(movement$lengths[1:(lastNoMov - 1)]) #Call dead at the start of the last no movement bout
-        
+
         #Call sleep for the previous no movement bouts
         if(sleepIndexes[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
           sleepStartTimes <- sapply(sleepIndexes[2:(length(sleepIndexes) - 1)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
@@ -88,13 +88,13 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
         else{
           sleepStartTimes <- sapply(sleepIndexes[1:(length(sleepIndexes) - 1)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
         }
-        
-        sleepLengths <- movement$lengths[sleepIndexes[1:(length(sleepIndexes) - 1)]] #sleep lengths 
+
+        sleepLengths <- movement$lengths[sleepIndexes[1:(length(sleepIndexes) - 1)]] #sleep lengths
         sleepNr <- length(sleepIndexes) - 1
       }
       else{
         dead <- NA
-        
+
         if(sleepIndexes[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
           sleepStartTimes <- sapply(sleepIndexes[2:length(sleepIndexes)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
           sleepStartTimes <- c(1, sleepStartTimes)
@@ -102,7 +102,7 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
         else{
           sleepStartTimes <- sapply(sleepIndexes, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
         }
-        sleepLengths <- movement$lengths[sleep] #sleep lengths 
+        sleepLengths <- movement$lengths[sleep] #sleep lengths
         sleepNr <- sum(sleep)
       }
     }
@@ -112,16 +112,16 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
       sleepNr <- 0
       sleepStartTimes <- NA
     }
-    
-    
+
+
     ##### Movement Bouts #####
     mvBouts <- movement$lengths > mvMin & movement$values
-    
-    
+
+
     if(any(mvBouts)){
       mvBoutsIndexes <- which(mvBouts)
       c <- 1
-      
+
       while(c <= length(mvBoutsIndexes)){
         #iterate forward until we reach a "blocker" - that is a non movement bout of more than (parameter)
         #Rename smoothing factor to smothing more reasonable
@@ -135,9 +135,9 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
         mvBoutsIndexes <- which(mvBouts)
         c <- c + 1
       }
-      
-      
-      
+
+
+
       #Get mv lengths, start times etc
       mvLengths <- movement$lengths[mvBoutsIndexes]
       mvNr <- sum(mvBouts)
@@ -148,7 +148,7 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
       else{
         mvStartTimes <- sapply(mvBoutsIndexes, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
       }
-      mvEndTimes <- sapply(mvBoutsIndexes, function(x){ sum(movement$lengths[1:x]) } ) 
+      mvEndTimes <- sapply(mvBoutsIndexes, function(x){ sum(movement$lengths[1:x]) } )
       #Get the average speed in every bout
       boutSpeeds <- rep(NA, length(mvStartTimes))
       for (t in 1:length(mvStartTimes)) {
@@ -156,12 +156,12 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
       }
     }
     else{
-      mvLengths <- NA 
+      mvLengths <- NA
       mvNr <- 0
       mvStartTimes <- NA
       boutSpeeds <- NA
     }
-    
+
     result[[i]] <- list(sleepLengths = sleepLengths, sleepNr = sleepNr, sleepStartTimes = sleepStartTimes,
                         mvLengths = mvLengths, mvNr = mvNr, mvStartTimes = mvStartTimes, dead = dead, boutSpeeds = boutSpeeds)
   }
@@ -171,17 +171,17 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
 
 
 flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
-  if(is.na(sex) && is.na(treatment)){
+  if(is.na(sex) && is.na(treatments)){
     stop("Neither sex nor treatments provided")
   }
   if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
     if(!is.na(treatments[1])){
-      
+
       treatments.uniq <- unique(treatments)
       nTreatments <- length(treatments.uniq)
       speed.groupAvg <- as.data.frame(matrix(nrow = nrow(speed), ncol = 2*nTreatments))
-      
-      #speed.groupAvg will be organized as: 
+
+      #speed.groupAvg will be organized as:
       # - column 1 TO nTreatments = males in each treatment
       # - column nTreatments + 1 TO 2*nTreatments = females in each treatment
       groupedTreatments = c(NA) #First elements to NA to keep NA checks false until populated
@@ -191,17 +191,17 @@ flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
         speed.groupAvg[,i] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] & sex]))
         groupedSex[i] = TRUE
         groupedTreatments[i] = as.character(treatments.uniq[i])
-        
+
         #females
         speed.groupAvg[,i + nTreatments] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] & !sex]))
         groupedSex[i+nTreatments] = FALSE
         groupedTreatments[i+nTreatments] = as.character(treatments.uniq[i])
       }
-      
+
       #Calculate SDs of the above means - Not implemented
       # if(sdShading){
       #   speed.groupSD <- as.data.frame(matrix(nrow = nrow(speed), ncol = 2*nTreatments))
-      #   
+      #
       #   for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
       #     speed.groupSD[,i] <- rowSds(as.matrix(speed[, treatments == treatments.uniq[i] & sex])) #males
       #     speed.groupSD[,i + nTreatments] <- rowSds(as.matrix(speed[, treatments == treatments.uniq[i] & !sex])) #females
@@ -212,11 +212,11 @@ flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
     else{
       groupedSex <- c(1,2) #Male & female
       speed.groupAvg <- as.data.frame(matrix(nrow = nrow(speed), ncol = 2))
-      
+
       #Direct grouping by sex metadata as passed in
       speed.groupAvg[,1] <- rowMeans(as.matrix(speed[, sex])) #males
       speed.groupAvg[,2] <- rowMeans(as.matrix(speed[, !sex])) #females
-      
+
     }
   }
   #Just treatments - no sex
@@ -227,13 +227,11 @@ flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
     #All in treatment group to group
     for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
       groupedSex[i] = treatments.uniq[i]
-      speed.groupAvg[,i] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i]])) 
+      speed.groupAvg[,i] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i]]))
     }
   }
   return(list("speed" = speed.groupAvg, "sex" = as.vector(groupedSex), "treatments" = as.vector(groupedTreatments)))
 }
-
-
 
 #Get p-value from a LinearModel
 lmp <- function (modelobject) {

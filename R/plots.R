@@ -15,7 +15,7 @@
 
 
 plot.flyMv_allFigs <- function(speed, activity, fileBaseName, 
-                               sex = NA, treatments = NA, hz = 5, time = 'min', 
+                               sex, treatments, hz = 5, time = 'min', 
                                treatmentLevels = NA, width = 5*60^2, by = 5*60*30, avgMv = T, noMv = F){ 
   #Wrapper function that produces various figures of fly activity
   
@@ -353,12 +353,12 @@ plot.flyMv_survival <- function(activity, treatments = NA, time = 'h', hz = 5, t
   activity.death <- sapply(activity, function(x){x$dead})/framesPerTime
   tmp <- as.factor(treatments)
   activity.death_treatments <- split(activity.death, tmp)
-  
+  if(max(activity.death, na.rm = T) != -Inf){
   #Create time x-axis
   if(is.na(experimentLength)) #x-axis extends until last death
     t <- seq(1, max(activity.death, na.rm = T), length.out = 100)
   else
-    t <- seq(1, experimentLength/framesPerTime, length.out = 100)
+    t <- seq(1, nrows(activity)/framesPerTime, length.out = 100)
   
   #Fraction alive
   # activity.death_treatment.surv <- sapply(t, function(x){sum(activity.death_treatment > x, na.rm = T)/length(activity.death_treatment)})
@@ -390,6 +390,7 @@ plot.flyMv_survival <- function(activity, treatments = NA, time = 'h', hz = 5, t
   mtext(paste('Time (', time, ')', sep = ''), side = 1, cex = 2, line = 3)
   if(!is.na(treatmentLevels[1]))
     legend('bottomleft', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
+  }
 }
 
 

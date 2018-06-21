@@ -1,0 +1,12 @@
+Package: RATrak
+Type: Package
+Title: Time series analysis tools optimized for use with D. Melanogaster phenotype data
+Version: 0.1.0
+Authors@R: c(person("Scott","Wolf", role=c("aut", "cre"), email="swwolf@ualr.edu"),person("Simon","Forsberg", role=c("aut")))
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: MPL-2.0 | file LICENSE
+Imports: data.table, zoo, matrixStats, ggplot2, tidyverse
+Encoding: UTF-8
+URL: https://wolfffff.github.io/RATrak/
+BugReports: https://github.com/Wolfffff/RATrak/issues
