@@ -1,7 +1,6 @@
 #Plots function 
 #plot.flyMv_allFigs - All figures
 #plot.flyMv_cumMv - Requires work to identify sexes
-#plot.flyMv_rollAvg_grouped - Experiment specific, requires treatment, sex, etc
 #plot.flyMv_rollAvg - Working
 #plot.flyMovement_plate
 #plot.highlightBouts
@@ -67,16 +66,36 @@ plot.flyMv_allFigs <- function(speed, activity, fileBaseName,
 
 
 #Note: Data points are too dense for lty's to do anything
-plot.flyMv_cumMv <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', treatmentLevels = NA, title = NA){
-  speed.cumDist <- apply(speed, MARGIN = 2, FUN = cumsum)
-  
-  if(time == 'min')
-    t <- 1:nrow(speed)/(hz*60)
-  else if(time == 'h')
-    t <- 1:nrow(speed)/(hz*60^2)
-  else
+plot.flyMv_cumMv <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', treatmentLevels = NA, title = NA, start = NA, end = nrow(speed), sampling = 100){
+  if(time == 'min'){
+    timeFactor <- 60
+    if(end != nrow(speed)){
+      end <- end*hz*timeFactor
+    }
+    if(!is.na(start)){
+      start <- start*hz*timeFactor
+    }
+    else{
+      start <- 1
+    }
+  }
+  else if(time == 'h'){
+    timeFactor <- 60^2
+    if(end != nrow(speed)){
+      end <- end*hz*timeFactor
+    }
+    if(!is.na(start)){
+      start <- start*hz*timeFactor
+    }else{
+      start <- 1
+    }
+  }
+  else{
     stop('time needs to be \'min\' or \'h\'')
-  
+  }
+  speed.cumDist <- apply(speed[start:end,], MARGIN = 2, FUN = cumsum)
+  sample <-  seq.int(from = 1, to = nrow(speed.cumDist), length.out = 100)
+  t <- seq(from = (start/(hz*timeFactor)), to = (end/(hz*timeFactor)), length.out = 100)
   #Color for treatment
   if(!is.na(treatments[1])){
     cols.palette <- rainbow(length(unique(treatments)))
@@ -91,16 +110,16 @@ plot.flyMv_cumMv <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'm
     cols <- rep('black', ncol(speed))
   
   #Line type for sex
-  ltys <- rep(2, ncol(speed)) #Lty's don't work because of density.
+  ltys <- rep(2, ncol(speed)) #Lty's don't work because of density on big sets
   if(!is.na(sex[1])) #Assumes sex = logical vector. T == male
-    ltys[sex] <- 1
-  
-  plot(t, speed.cumDist[,1], type = 'l', ylim = c(0, max(speed.cumDist)), ylab = '', xlab = '', col = cols[1],lty = ltys[1], lwd = ltys[1])
+    ltys[sex] <- 1 #We also use this to define
+
+  plot(t, speed.cumDist[sample,1], type = 'l', ylim = c(0, max(speed.cumDist)), ylab = '', xlab = '', col = cols[1],lty = ltys[1], lwd = ltys[1])
   for(i in 2:ncol(speed.cumDist)){
-    points(t, speed.cumDist[,i], type = 'l', ylim = c(0, max(speed.cumDist)), col = cols[i], lty = ltys[i], lwd = ltys[i])
+    points(t, speed.cumDist[sample,i], type = 'l', ylim = c(0, max(speed.cumDist)), col = cols[i], lty = ltys[i], lwd = ltys[i])
   }
   if(is.na(title))
-    title(paste('Movement during', round(tail(t, 1), digits = 4), time), cex.main = 2)
+    title(paste('Movement during', round((tail(t, 1) - head(t,1)), digits = 4), time), cex.main = 2)
   else
     title(title, cex.main = 2)
   
@@ -111,107 +130,9 @@ plot.flyMv_cumMv <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'm
   if(!is.na(treatmentLevels[1]))
     legend('topleft', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
   if(!is.na(sex[1]))
-    legend('top', c('Male', 'Female'), lwd = 1:2, cex = 2)  
+    legend('top', c('Male', 'Female'), lty = 1:2, cex = 2)  
 }
 
-
-
-plot.flyMv_rollAvg_grouped <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', 
-                                       treatmentLevels = NA, title = NA, 
-                                       width = 5*60^2, by = 5*60*30, sdShading = F, ...){
-    
-  
-  #Function under construction. sd-shading and no treatment not implemented yet
-  #if(class(speed)[1] != 'data.table')
-   # stop('speed need to be of class data.table')
-  if(time == 'min')
-    framesPerTime <- hz*60
-  else if(time == 'h')
-    framesPerTime <- hz*60^2
-  else
-    stop('time needs to be \'min\' or \'h\'')
-  #Average by treatment and sex
- 
-   
-  #TODO-SWW split else statements for dealing with both cases of sex and treatment
-  
-  if(!is.na(width) & !is.na(by)){ #Average sliding windows as given by 'width' and 'by'
-    speed.avg <- rollapply(data = speed.groupAvg, width = width, FUN = mean, by.column = T, by = by, ...)
-    
-    #Create vector with time points matching the averaged windows
-    tmp <- 1:nrow(speed)
-    t <- tmp[seq(1, nrow(speed) - (width - 1), by)]/framesPerTime
-  }
-  else{ #No sliding window
-    speed.avg <- speed.groupAvg
-    rm(speed.groupAvg)
-    gc()
-    
-    #Time vector
-    t <- (1:nrow(speed))/framesPerTime
-  }
-  
-  #Color for treatment
-  if(!is.na(treatments[1])){
-    cols.palette <- rainbow(length(unique(treatments)), start = 0, end = 4/6)
-    cols <- c(cols.palette, cols.palette)
-    
-    if(is.na(treatmentLevels[1]))
-      treatmentLevels <- treatments.uniq
-    # treatmentLevels <- paste('group', unique(treatments))
-  }
-  else
-    #TODO - Cols for sexes w/o treatment
-    cols <- rep('black', ncol(speed))
-  
-  #Line type for sex
-  if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
-    if(!is.na(treatments[1]))
-      ltys <- c(rep(1, nTreatments), rep(2, nTreatments))
-    else{
-      #
-      ltys <- c(1,2)
-    }
-  }
-  else{
-    ltys<- rep(1,nTreatments)
-  }
-  
-  if(sdShading){
-    #Modified from https://stackoverflow.com/questions/29743503/how-to-add-shaded-confidence-intervals-to-line-plot-with-specified-values/29747072
-    ids <- as.data.frame(seq_along(speed.groupAvg[,1]))
-    temp <- merge(ids, speed.groupAvg[,1])
-    p <- ggplot(data=,aes(x=V1, y=V2)) + geom_point() + geom_line()
-    #p <-p+geom_ribbon(aes(ymin=(speed.groupAvg[,1] - speed.groupSD[,1]), ymax=(speed.groupAvg[,1] - speed.groupSD[,1])), linetype=2, alpha=0.1)
-    p
-  }
-  #Sex => male = 1, female = 1
-  else{
-    plot(t, speed.avg[,1], type = 'l', ylim = c(0, max(speed.avg, na.rm = T)), ylab = '', xlab = '', col = cols[1], lty = ltys[1], lwd = 2)
-    print(ltys)
-    
-    for(i in 2:ncol(speed.avg)){
-      points(t, speed.avg[,i], type = 'l', ylim = c(0, max(speed.avg, na.rm = T)), col = cols[i], lty = ltys[i], lwd = 2)
-    }
-    #Legends
-    if(!is.na(treatmentLevels[1])){
-      legend(x = 'topright', legend = treatmentLevels, col = cols.palette, cex = 2, pch= 19)
-    }
-    if(!is.na(sex[1])){
-      legend(x = 'top', legend = c('Male', 'Female'), lty = 1:2, cex = 2) 
-    }
-    
-    if(is.na(title))
-      title(paste('Movement during', round(tail(t, 1), digits = 4), time), cex.main = 2)
-    else
-      title(title, cex.main = 2)
-    
-    mtext(paste('Time (', time, ')', sep = ''), side = 1, cex = 2, line = 3)
-    mtext('Distance traveled per window', side = 2, cex = 2, line = 2)
-    
-     
-  }
-}
 
 
 

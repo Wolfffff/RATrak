@@ -170,8 +170,10 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
 
 
 
-flies.avgByGroup <- function(speed, sex, treatment) {
-  
+flies.avgByGroup <- function(speed, sex = NA, treatment = NA) {
+  if(is.na(sex) && is.na(treatment)){
+    stop("Neither sex nor treatments provided")
+  }
   if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
     if(!is.na(treatments[1])){
       
