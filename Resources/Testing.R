@@ -17,7 +17,7 @@ activity <- flies.sleepActivity(speed)
 plot.flyMv_allFigs(speed, activity, "Name", sex = sex, treatments = treatments)
 
 #Group info before passing into - make sure you pass the same info into further functions
-groupedInfo = flies.avgByGroup(speed)
+groupedInfo = flies.avgByGroup(speed, treatments = treatments)
 
 
 #plot.flyMv_cumMv(speed, sex, treatments, start = 150, sampling = 100)

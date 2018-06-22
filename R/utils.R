@@ -1,10 +1,21 @@
 #Utility functions
+#lmp
 #readBinary
 #readMetadata
 #loadPackages
 #
 #
 #
+#
+
+
+lmpVal <- function (modelobject) {
+  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+  f <- summary(modelobject)$fstatistic
+  p <- pf(f[1],f[2],f[3],lower.tail=F)
+  attributes(p) <- NULL
+  return(p)
+}
 
 readBinary <- function(fileName, colCount, start = 1, end = colCount){
   file <- file(fileName, "rb")

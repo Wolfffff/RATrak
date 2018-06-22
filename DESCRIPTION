@@ -1,5 +1,7 @@
 Package: RATrak
 Type: Package
+YEAR: 2018
+LazyData: true
 Title: Time series analysis tools optimized for use with D. Melanogaster phenotype data
 Version: 0.1.0
 Authors@R: c(person("Scott","Wolf", role=c("aut", "cre"), email="swwolf@ualr.edu"),person("Simon","Forsberg", role=c("aut")))

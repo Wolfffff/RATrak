@@ -1,7 +1,6 @@
 #Processing matrix data
 #flies.sleepActivity
 #flies.avgByGroup
-#lmp - fit linear model
 #
 #
 #
@@ -174,6 +173,8 @@ flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
   if(is.na(sex) && is.na(treatments)){
     stop("Neither sex nor treatments provided")
   }
+  groupedTreatments = c(NA) #First elements to NA to keep NA checks false until populated
+  groupedSex <- c(NA)
   if(!is.na(sex[1])){ #Assumes sex = logical vector. T == male
     if(!is.na(treatments[1])){
 
@@ -184,8 +185,7 @@ flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
       #speed.groupAvg will be organized as:
       # - column 1 TO nTreatments = males in each treatment
       # - column nTreatments + 1 TO 2*nTreatments = females in each treatment
-      groupedTreatments = c(NA) #First elements to NA to keep NA checks false until populated
-      groupedSex <- c(NA)
+
       for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
         #males
         speed.groupAvg[,i] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] & sex]))
@@ -226,18 +226,10 @@ flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
     speed.groupAvg <- matrix(nrow = nrow(speed), ncol = nTreatments)
     #All in treatment group to group
     for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
-      groupedSex[i] = treatments.uniq[i]
       speed.groupAvg[,i] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i]]))
-    }
+      groupedTreatments[i] = as.character(treatments.uniq[i])    
+      }
   }
   return(list("speed" = speed.groupAvg, "sex" = as.vector(groupedSex), "treatments" = as.vector(groupedTreatments)))
 }
 
-#Get p-value from a LinearModel
-lmp <- function (modelobject) {
-  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
-  f <- summary(modelobject)$fstatistic
-  p <- pf(f[1],f[2],f[3],lower.tail=F)
-  attributes(p) <- NULL
-  return(p)
-}
