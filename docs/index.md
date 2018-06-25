@@ -9,6 +9,10 @@ To see some examples of the code in use, see the project's [examples](https://gi
 ![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/RATrak_200618.png)
 
 
+## Example Figures
+![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/GxE_avgMvLength_resid.png)
+
+
 ## Installation
 
 ```R
