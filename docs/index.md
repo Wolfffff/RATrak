@@ -10,8 +10,12 @@ To see some examples of the code in use, see the project's [examples](https://gi
 
 
 ## Example Figures
+### GxE Box Plot
 ![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/GxE_avgMvLength_resid.png)
 
+###Grouped Speed
+
+![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/groupedSpeed2.png)
 
 ## Installation
 

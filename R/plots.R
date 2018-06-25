@@ -62,7 +62,6 @@ plot.flyMv_allFigs <- function(speed, activity, fileBaseName,
   
   #Survival
   file <- paste(fileBaseName, '_survival.png', sep = '')
-  print("here")
   png(filename = file, width = 1200, height = 800)
   plot.flyMv_survival(activity = activity, treatments = treatments, treatmentLevels = treatmentLevels)
   dev.off()
