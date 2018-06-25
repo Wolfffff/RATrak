@@ -8,6 +8,7 @@
 #plot.flyMv_avgSleepLength
 #plot.flyMv_sleepNr
 #plot.flyMv_avgMvLength
+#plot.gXeBox
 #
 #
 #
@@ -501,4 +502,59 @@ plot.flyMv_avgMvLength <- function(activity, treatments = NA, treatmentLevels = 
     # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
     legend('topleft', paste('p =', round(p, digits = 3)), title = 'Anova')
   }
+}
+
+plot.gxeBoxes <- function(activity, meta, control = FALSE, treatment = TRUE, trait = 'avgMvLength'){
+  #Genotype x Environment visualization example
+  flies <- activity
+  y = c()
+  if(trait == "avgMvLength"){
+    for (i in 1:length(activity)) {
+      if (!is.na(activity[[i]]$mvLengths[1])) {
+        y[i] <- mean(activity[[i]]$mvLengths)
+      }
+      else{
+        y[i] <- 0
+      }
+    }
+  }
+  fam <- as.character(meta$Family)
+  rotenone <- meta$Treatment
+  
+  #Fit models with and without interaction
+  model.add <- summary(lm(y ~ rotenone + fam))
+  model.int <- summary(lm(y ~ rotenone * fam))
+  familyPlusRot.r2 <- round(model.add$adj.r.squared, 3)
+  familyTimesRot.r2 <- round(model.int$adj.r.squared, 3)
+  
+  box <- boxplot(y ~ fam * rotenone, plot = F)
+  #Re-order boxes
+  newOrder <- order(box$names)
+  box.newOrder <- box
+  box.newOrder$stats <- box$stats[,newOrder]
+  box.newOrder$n <- box$n[newOrder]
+  box.newOrder$names <- box$names[newOrder]
+  box.newOrder$conf <- box$conf[,newOrder]
+  for(j in 1:length(newOrder)){
+    box.newOrder$group[box$group == newOrder[j]] <- j
+  }
+  cols <- sort(rep(rainbow(length(unique(fam))), 2))
+  #vector to space the boxes
+  spacing <- 3
+  tmp <- seq(1, length(box$names)*spacing/2, spacing)
+  at = sort(c(tmp, tmp+1))
+  #png(filename = paste('GxE_', trait, '_raw.png', sep = ''), width = 1200, height = 800)
+  bxp(box.newOrder, boxfill = cols, xaxt = 'n', at = at)
+  grid(nx = 26, ny = 26) #nx = 52, ny = 52
+  bxp(box.newOrder, boxfill = cols, xaxt = 'n', at = at, add = T)
+  labels <- gsub(pattern = '(.*)\\..*', replacement = '\\1', x = box.newOrder$names)[seq(1, length(box.newOrder$names), 2)]
+  axis(side = 1, at = seq(1.5, length(box$names)*spacing/2 - .5, spacing), labels = labels, las = 2)
+  mtext(trait, side = 2, cex = 2, line = 2.5)
+  #TODO - SW - Fix labeling
+  mtext('Treatments per family', side = 3, cex = 2, line = 1) #Need to fix labeling
+  #Legend with R2s
+  legend <- c(as.expression(bquote(R2[add] ~ '=' ~ .(familyPlusRot.r2))), 
+              as.expression(bquote(R2[int] ~ '=' ~ .(familyTimesRot.r2))))
+  legend(x = 'topleft', legend = legend, title = 'Variance Explained', cex = 2)
+  #dev.off()
 }
