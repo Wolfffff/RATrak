@@ -13,6 +13,39 @@
 #
 #
 
+plot.flyMv_mvNr <- function(activity, treatments = NA, treatmentLevels = NA, test = 'wilcox'){
+    treatments <- as.factor(treatments)
+    activity_treatments <- split(activity, treatments)
+    avgSleep <- list()
+    for(i in 1:length(activity_treatments))
+        avgSleep[[i]] <- sapply(activity_treatments[[i]], FUN = function(x){mean(x$mvNr)})
+      
+        if(is.na(treatmentLevels[1]))
+            treatmentLevels <- paste('group', levels(treatments))
+          
+            box <- boxplot(avgSleep, xaxt = 'n', frame = F)
+            axis(side = 1, at = 1:nlevels(treatments), labels = treatmentLevels, cex.axis = 2)
+            mtext(side = 2, text = 'Number of movement bouts', cex = 2, line = 2)
+            
+              if(nlevels(treatments) == 2 & !is.na(test)){
+                  if(test == 'wilcox'){
+                      p <- wilcox.test(avgSleep[[1]], avgSleep[[2]])$p.value
+                      # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
+                        legend('topleft', paste('p =', round(p, digits = 3)), title = 'Wilcoxon')
+                    }
+                  if(test == 't.test'){
+                      p <- t.test(avgSleep[[1]], avgSleep[[2]])$p.value
+                      # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
+                        legend('topleft', paste('p =', round(p, digits = 3)), title = 't-test')
+                    }
+                }
+            if(nlevels(treatments) > 2 & !is.na(test)){
+                model <- lm(unlist(avgSleep) ~ treatments)
+                p <- lmp(model)
+                # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
+                  legend('topleft', paste('p =', round(p, digits = 3)), title = 'Anova')
+              }
+}
 
 
 plot.flyMv_allFigs <- function(speed, activity, fileBaseName, 
@@ -29,6 +62,7 @@ plot.flyMv_allFigs <- function(speed, activity, fileBaseName,
   
   #Survival
   file <- paste(fileBaseName, '_survival.png', sep = '')
+  print("here")
   png(filename = file, width = 1200, height = 800)
   plot.flyMv_survival(activity = activity, treatments = treatments, treatmentLevels = treatmentLevels)
   dev.off()
