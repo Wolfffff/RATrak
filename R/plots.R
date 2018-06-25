@@ -183,7 +183,7 @@ plot.flyMv_rollAvg <- function(speed, sex = NA, treatments = NA, hz = 5, time = 
   else{
     stop('time needs to be \'min\' or \'h\'')
   }
-  speed.avg <- rollapply(data = as.data.frame(speed), width = width, FUN = mean, by.column = T, by = by, ...)
+  speed.avg <- rollapply(data = as.data.frame(speed), width = width, FUN = mean, by.column = T, by = by)
   
   #Create vector with time points matching the averaged windows
   tmp <- 1:nrow(speed)
@@ -191,7 +191,8 @@ plot.flyMv_rollAvg <- function(speed, sex = NA, treatments = NA, hz = 5, time = 
   
   #Color for treatment
   if(!is.na(treatments[1])){
-    cols.palette <- rainbow(length(unique(treatments)))
+    # cols.palette <- rainbow(length(unique(treatments)))
+    cols.palette <- wes_palette(name = 'Cavalcanti1', n = length(unique(treatments)), type = 'discrete')
     tmp <- as.factor(treatments)
     cols <- cols.palette[tmp]
     
@@ -208,9 +209,9 @@ plot.flyMv_rollAvg <- function(speed, sex = NA, treatments = NA, hz = 5, time = 
     ltys[sex] <- 2
   }
   
-  plot(t, speed.avg[,1], type = 'l', ylim = c(0, max(speed.avg)), ylab = '', xlab = '', col = cols[1], lty = ltys[1])
+  plot(t, speed.avg[,1], type = 'l', ylim = c(0, max(speed.avg)), ylab = '', xlab = '', col = cols[1], lty = ltys[1], ...)
   for(i in 2:ncol(speed.avg)){
-    points(t, speed.avg[,i], type = 'l', ylim = c(0, max(speed.avg)), col = cols[i], lty = ltys[i])
+    points(t, speed.avg[,i], type = 'l', ylim = c(0, max(speed.avg)), col = cols[i], lty = ltys[i], ...)
   }
   if(is.na(title)){
     title(paste('Speed during', round(tail(t, 1), digits = 4), time), cex.main = 2)
