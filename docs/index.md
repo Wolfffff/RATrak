@@ -2,7 +2,7 @@
 
 Utilize a variety of summarization, plotting, and general utility functions for gaining insight into time series data. Specifically designed to work with [AutoTracker](https://github.com/de-Bivort-Lab/autotracker).
 
-To see some examples of the code in use, see the project's [examples](https://github.com/Wolfffff/RATrak) folder or examples below. 
+To see some examples of the code in use, see the project's [resources](https://github.com/Wolfffff/RATrak) folder or examples below. 
 
 ## Structure
 
@@ -16,6 +16,10 @@ To see some examples of the code in use, see the project's [examples](https://gi
 ###Grouped Speed
 
 ![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/groupedSpeed2.png)
+
+## Well Plot
+
+![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/24well.png)
 
 ## Installation
 
@@ -51,8 +55,6 @@ plot.flyMv_allFigs(speed, activity, "Name", sex = groupedInfo$sex, treatments = 
 ```R
 More sample code to come...
 ```
-
-
 
 ## Contributing
 
