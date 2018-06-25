@@ -13,11 +13,11 @@ To see some examples of the code in use, see the project's [resources](https://g
 ### GxE Box Plot
 ![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/GxE_avgMvLength_resid.png)
 
-###Grouped Speed
+### Grouped Speed
 
 ![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/groupedSpeed2.png)
 
-## Well Plot
+### Well Plot
 
 ![](https://raw.githubusercontent.com/Wolfffff/RATrak/master/Resources/24well.png)
 
