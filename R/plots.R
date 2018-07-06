@@ -242,19 +242,25 @@ plot.flyMovement_plate <- function(speed, nRows = 4, nCols = 6, colRange = c("bl
     tmp <- as.numeric(cut(fracWithMov, breaks = seq(0, max(fracWithMov), length.out = nCols))) + 1
     tmp[is.na(tmp)] <- 1
     cols <- c('white', pal(nCols))
-    plot(x, y, cex = 5.1, yaxt = 'n', xaxt = 'n', xlab = '', ylab = '')
-    points(x, y, pch = 19, cex = 5, col = cols[tmp])
+    par(mai=c(1,.5,1,1))
+    plot(x, y, cex = 6, yaxt = 'n', xaxt = 'n', xlab = '', ylab = '',xlim=c(.5, (nCols + .5)), ylim=c(.75, (nRows + .25)))
+    title(main="Per Well Movement")
+    points(x, y, pch = 19, cex = 6, col = cols[tmp])
     axis(side = 1, 1:nCols)
     possibleLabels = c('M', 'L', 'K', 'J','I','H', 'G', 'F', 'E', 'D', 'C', 'B', 'A')
     sortedLabels = tail(possibleLabels, n=nRows)
     axis(side = 2, at = 1:nRows, labels = sortedLabels)
+    ColorLegend(x=(nCols + 1), y=nRows,height=(nRows-1),width=.5,labels=c("Min", "Max"), col=pal(25))
+    }
+  else{
+    stop("Rows multiplied by columns is not equal to the number of columns in speed.")
   }
   
 }
 
 
 
-plot.highlightBouts <- function(speed = speed,sleepActivity = flies.sleepActivity(speed = as.data.frame(speed), erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both", ...){
+plot.highlightBouts <- function(speed,sleepActivity = flies.sleepActivity(speed = as.data.frame(speed), erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both", ...){
   #timeScale('h', 'm' or 's') gives timescale of plotting. Default is 's'
   #start is start time in units of timeScale(e.g. 5 with 'h' is start at hour 5). Default is 1
   #end is end time in units of timeScale as above. Default is 5
@@ -428,6 +434,9 @@ plot.flyMv_survival <- function(activity, treatments = NA, time = 'h', hz = 5, t
   mtext(paste('Time (', time, ')', sep = ''), side = 1, cex = 2, line = 3)
   if(!is.na(treatmentLevels[1]))
     legend('bottomleft', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
+  }
+  else{
+    print("No deaths found.")
   }
 }
 
