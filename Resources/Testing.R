@@ -5,14 +5,18 @@ source("R/plots.R")
 #loadPackages(c("data.table", "zoo", "matrixStats", "ggplot2", "tidyverse"))
 
 #Read binary data into matrix with given colCount
-speed <- readBinary("/Users/Wolf/RareTrombone/Resources/05-19-2018-19-13-19_Speed.bin", 144,1, 100)
+speed <- readBinary("/Users/Wolf/RareTrombone/Resources/05-19-2018-19-13-19_Speed.bin", 144,1, 50)
 
 #Read manually created "info" csv containing metadata
 metadata <- readMetadata("/Users/Wolf/RareTrombone/Resources/info.csv")
 
-#activity <- flies.sleepActivity(speed)
+activity <- flies.sleepActivity(speed)
 
-plot.gxeBox(activity, metadata[1:100,], trait = 'avgMvLength')
+plot.flyMv_allFigs(speed, activity, "name", metadata$Male[1:50],metadata$Treatment[1:50])
+
+
+
+#plot.gxeBox(activity, metadata[1:100,], trait = 'avgMvLength')
 
 
 #Using only first 10

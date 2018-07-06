@@ -231,20 +231,23 @@ plot.flyMv_rollAvg <- function(speed, sex = NA, treatments = NA, hz = 5, time = 
 
 
 
-plot.flyMovement_plate <- function(speed, nCols = 10, colRange = c("blue", "red")){
+#Experimental function
+plot.flyMovement_plate <- function(speed, nRows = 4, nCols = 6, colRange = c("blue", "red")){
   nrWithMov <- apply(speed, 2, FUN = function(x){sum(x != 0)})
   fracWithMov <- nrWithMov/nrow(speed)
-  if(ncol(speed) == 91){ #96 well plate
-    x <- rep(1:12, 8)
-    y <- sort(rep(1:8, 12), decreasing = T)
+  if(ncol(speed) == nRows*nCols){ #Matching size
+    x <- rep(1:nCols, nRows)
+    y <- sort(rep(1:nRows, nCols), decreasing = T)
     pal = colorRampPalette(colRange)
     tmp <- as.numeric(cut(fracWithMov, breaks = seq(0, max(fracWithMov), length.out = nCols))) + 1
     tmp[is.na(tmp)] <- 1
     cols <- c('white', pal(nCols))
     plot(x, y, cex = 5.1, yaxt = 'n', xaxt = 'n', xlab = '', ylab = '')
     points(x, y, pch = 19, cex = 5, col = cols[tmp])
-    axis(side = 1, 1:12)
-    axis(side = 2, at = 1:8, labels = c('H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'))
+    axis(side = 1, 1:nCols)
+    possibleLabels = c('M', 'L', 'K', 'J','I','H', 'G', 'F', 'E', 'D', 'C', 'B', 'A')
+    sortedLabels = tail(possibleLabels, n=nRows)
+    axis(side = 2, at = 1:nRows, labels = sortedLabels)
   }
   
 }
