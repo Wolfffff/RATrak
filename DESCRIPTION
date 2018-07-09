@@ -8,7 +8,7 @@ Authors@R: c(person("Scott","Wolf", role=c("aut", "cre"), email="swwolf@ualr.edu
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: MPL-2.0 | file LICENSE
-Imports: data.table, zoo, matrixStats, ggplot2, tidyverse, wesanderson, desctools
+Imports: data.table, zoo, matrixStats, ggplot2, tidyverse, wesanderson, desctools, tibble
 Encoding: UTF-8
 URL: https://wolfffff.github.io/RATrak/
 BugReports: https://github.com/Wolfffff/RATrak/issues
