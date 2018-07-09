@@ -229,8 +229,6 @@ plot.flyMv_rollAvg <- function(speed, sex = NA, treatments = NA, hz = 5, time = 
     legend('top', c('Male', 'Female'), lty = 2:1, cex = 2)  
 }
 
-
-
 #Experimental function
 plot.flyMovement_plate <- function(speed, nRows = 4, nCols = 6, colRange = c("blue", "red")){
   nrWithMov <- apply(speed, 2, FUN = function(x){sum(x != 0)})
@@ -243,14 +241,17 @@ plot.flyMovement_plate <- function(speed, nRows = 4, nCols = 6, colRange = c("bl
     tmp[is.na(tmp)] <- 1
     cols <- c('white', pal(nCols))
     par(mai=c(1,.5,1,1))
-    plot(x, y, cex = 6, yaxt = 'n', xaxt = 'n', xlab = '', ylab = '',xlim=c(.5, (nCols + .5)), ylim=c(.75, (nRows + .25)))
+    #Ad hoc cex scaling
+    scalar <- abs(x-y)
+    plot(x, y, cex = 7/(1+.07*scalar), yaxt = 'n', xaxt = 'n', xlab = '', ylab = '',xlim=c(.5, (nCols + .5)), ylim=c(.75, (nRows + .25)))
     title(main="Per Well Movement")
-    points(x, y, pch = 19, cex = 6, col = cols[tmp])
+    
+    points(x, y, pch = 19, cex = 7/(1+.07*scalar), col = cols[tmp])
     axis(side = 1, 1:nCols)
     possibleLabels = c('M', 'L', 'K', 'J','I','H', 'G', 'F', 'E', 'D', 'C', 'B', 'A')
     sortedLabels = tail(possibleLabels, n=nRows)
     axis(side = 2, at = 1:nRows, labels = sortedLabels)
-    ColorLegend(x=(nCols + 1), y=nRows,height=(nRows-1),width=.5,labels=c("Min", "Max"), col=pal(25))
+    ColorLegend(x=(nCols + 1), y=nRows,height=(nRows-1),width=.5,labels=c("Min", "Max"), col=pal(100))
     }
   else{
     stop("Rows multiplied by columns is not equal to the number of columns in speed.")

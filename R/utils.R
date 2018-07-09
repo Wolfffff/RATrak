@@ -17,6 +17,14 @@ lmpVal <- function (modelobject) {
   return(p)
 }
 
+readInfo <- function(speedBinFileName, metadataFileName, wellCount, start = 1, end = wellCount){
+  trak <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", grouped = "list"))
+  speed <- readBinary(speedBinFileName, wellCount, start, end)
+  metadata <- readMetadata(metadataFileName)
+  data <- trak(speed=speed,metadata=metadata)
+  return(data)
+}
+
 readBinary <- function(fileName, colCount, start = 1, end = colCount){
   file <- file(fileName, "rb")
   mat <- matrix(readBin(file, numeric(), n= 9999999, size=4),ncol = colCount,byrow = TRUE)
@@ -25,7 +33,7 @@ readBinary <- function(fileName, colCount, start = 1, end = colCount){
 }
 
 readMetadata <- function(fileName){
-  meta <- read.csv("/Users/Wolf/RareTrombone/Resources/info.csv",header = TRUE)
+  meta <- read.csv(fileName,header = TRUE)
   meta$Treatment <- as.vector(meta$Treatment)
   return(meta)
 }
