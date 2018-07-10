@@ -6,7 +6,7 @@
 #
 
 
-flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 3, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, smoothingFactor = 10){
+flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 3, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, smoothingFactor = 10){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
   #mvThreshold = threshold to call bout of continous movement. Default 2s
@@ -18,6 +18,9 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
   deadMin <- deathThreshold*hz
   mvMin <- mvThreshold*hz
   errorMin <- errorThreshold*hz
+  
+  #Naming
+  speed <- trak@speed
 
   #Run length encoding of movement > 0, == streaks of movement
   speed.mov <- apply(speed, MARGIN = 2, FUN = function(x){rle(x > 0)})
@@ -164,12 +167,27 @@ flies.sleepActivity <- function(speed, sleepThreshold = 5*60, deathThreshold = 1
     result[[i]] <- list(sleepLengths = sleepLengths, sleepNr = sleepNr, sleepStartTimes = sleepStartTimes,
                         mvLengths = mvLengths, mvNr = mvNr, mvStartTimes = mvStartTimes, dead = dead, boutSpeeds = boutSpeeds)
   }
-  return(result)
+  trak@activity <- result
+  return(trak)
 }
 
 
 
-flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
+flies.avgByGroup <- function(trak, sex = T, treatments = T) {
+  if(sex == T){
+    sex <- as.vector(trak@metadata$Male)
+  }else{ #For clarity
+    sex <- NA
+  }
+  
+  if(treatments == T){
+    treatments <- as.vector(trak@metadata$Treatment)
+  }else{
+    treatments <- NA
+  }
+  speed <-trak@speed
+  
+  
   if(is.na(sex) && is.na(treatments)){
     stop("Neither sex nor treatments provided")
   }
@@ -230,6 +248,10 @@ flies.avgByGroup <- function(speed, sex = NA, treatments = NA) {
       groupedTreatments[i] = as.character(treatments.uniq[i])    
       }
   }
-  return(list("speed" = speed.groupAvg, "sex" = as.vector(groupedSex), "treatments" = as.vector(groupedTreatments)))
+  class <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", hz = "numeric"))
+  
+  output <- class(speed = as.data.frame(speed.groupAvg), metadata = data.frame("Male" = groupedSex, "Treatment" = groupedTreatments),hz = trak@hz)
+  output <- flies.sleepActivity(output)
+  return(output)
 }
 

@@ -9,7 +9,7 @@
 #
 
 
-lmpVal <- function (modelobject) {
+lmp <- function (modelobject) {
   if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
   f <- summary(modelobject)$fstatistic
   p <- pf(f[1],f[2],f[3],lower.tail=F)
@@ -17,25 +17,26 @@ lmpVal <- function (modelobject) {
   return(p)
 }
 
-readInfo <- function(speedBinFileName, metadataFileName, wellCount, start = 1, end = wellCount){
-  trak <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", grouped = "list"))
+readInfo <- function(speedBinFileName, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5){
+  trak <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", hz = "numeric"))
   speed <- readBinary(speedBinFileName, wellCount, start, end)
-  metadata <- readMetadata(metadataFileName)
-  data <- trak(speed=speed,metadata=metadata)
+  metadata <- readMetadata(metadataFileName, start, end)
+  data <- trak(speed=speed,metadata=metadata,hz=hz)
+  data <- flies.sleepActivity(data)
   return(data)
 }
 
 readBinary <- function(fileName, colCount, start = 1, end = colCount){
   file <- file(fileName, "rb")
   mat <- matrix(readBin(file, numeric(), n= 9999999, size=4),ncol = colCount,byrow = TRUE)
-  fly <- colCount
   return(as.data.frame(mat[,start:end]))
 }
 
-readMetadata <- function(fileName){
+readMetadata <- function(fileName, start = 1, end){
   meta <- read.csv(fileName,header = TRUE)
   meta$Treatment <- as.vector(meta$Treatment)
-  return(meta)
+  data = meta[start:end,]
+  return(data)
 }
 
 

@@ -13,8 +13,12 @@
 #
 #
 
-plot.flyMv_mvNr <- function(activity, treatments = NA, treatmentLevels = NA, test = 'wilcox'){
-    treatments <- as.factor(treatments)
+plot.flyMv_mvNr <- function(trak, treatmentLevels = NA, test = 'wilcox'){
+  #Naming
+  activity <- trak@activity
+  treatments = trak@metadata$Treatment
+  
+  treatments <- as.factor(treatments)
     activity_treatments <- split(activity, treatments)
     avgSleep <- list()
     for(i in 1:length(activity_treatments))
@@ -47,35 +51,33 @@ plot.flyMv_mvNr <- function(activity, treatments = NA, treatmentLevels = NA, tes
               }
 }
 
-
-plot.flyMv_allFigs <- function(speed, activity, fileBaseName, 
-                               sex, treatments, hz = 5, time = 'min', 
+#Converting to trak obj
+plot.flyMv_allFigs <- function(trak, fileBaseName, time = 'min', 
                                treatmentLevels = NA, width = 5*60^2, by = 5*60*30, avgMv = T, noMv = F){ 
   #Wrapper function that produces various figures of fly activity
   
   #Cummulative movement 
   file <- paste(fileBaseName, '_cumMv.png', sep = '')
   png(filename = file, width = 1200, height = 800)
-  plot.flyMv_cumMv(speed = speed, sex = sex, 
-                   treatments = treatments, time = time, treatmentLevels = treatmentLevels, hz = hz)
+  plot.flyMv_cumMv(trak, time = time, treatmentLevels = treatmentLevels)
   dev.off()
   
   #Survival
   file <- paste(fileBaseName, '_survival.png', sep = '')
   png(filename = file, width = 1200, height = 800)
-  plot.flyMv_survival(activity = activity, treatments = treatments, treatmentLevels = treatmentLevels)
+  plot.flyMv_survival(trak, treatmentLevels = treatmentLevels)
   dev.off()
   
   #Movement and sleep comparisons across whole experiment
   file <- paste(fileBaseName, '_sleepAndMvBouts.png', sep = '')
   png(filename = file, width = 1200, height = 800)
   par(mfrow = c(2,2))
-  plot.flyMv_avgSleepLength(activity = activity, treatments = treatments, treatmentLevels = treatmentLevels)
-  plot.flyMv_sleepNr(activity = activity, treatments = treatments, treatmentLevels = treatmentLevels)
+  plot.flyMv_avgSleepLength(trak, treatmentLevels = treatmentLevels)
+  plot.flyMv_sleepNr(trak, treatmentLevels = treatmentLevels)
   mtext(text = 'Sleep', side = 3, cex = 4, line = .5, adj = -.3)
   
-  plot.flyMv_avgMvLength(activity = activity, treatments = treatments, treatmentLevels = treatmentLevels)
-  plot.flyMv_mvNr(activity = activity, treatments = treatments, treatmentLevels = treatmentLevels)
+  plot.flyMv_avgMvLength(trak, treatmentLevels = treatmentLevels)
+  plot.flyMv_mvNr(trak, treatmentLevels = treatmentLevels)
   mtext(text = 'Movement', side = 3, cex = 4, line = .5, adj = -.5)
   dev.off()
   
@@ -83,8 +85,7 @@ plot.flyMv_allFigs <- function(speed, activity, fileBaseName,
   if(avgMv){
     file <- paste(fileBaseName, '_avgMvPerWindow.png', sep = '')
     png(filename = file, width = 1200, height = 800)
-    plot.flyMv_rollAvg(speed = speed, sex = sex, 
-                       treatments = treatments, time = time, treatmentLevels = treatmentLevels, width = width, by = by, hz = hz)
+    plot.flyMv_rollAvg(trak, time = time, treatmentLevels = treatmentLevels, width = width, by = by)
     dev.off()
   }
   
@@ -92,15 +93,21 @@ plot.flyMv_allFigs <- function(speed, activity, fileBaseName,
   if(noMv){
     file <- paste(fileBaseName, '_fracNoMvPerWindow.png', sep = '')
     png(filename = file, width = 1200, height = 800)
-    plot.flyMv_rollNoMov(speed = speed, sex = sex, 
-                         treatments = treatments, time = time, treatmentLevels = treatmentLevels, width = width, by = by, hz = hz)
+    plot.flyMv_rollNoMov(trak, time = time, treatmentLevels = treatmentLevels, width = width, by = by)
     dev.off()
   }
 }
 
 
 #Note: Data points are too dense for lty's to do anything
-plot.flyMv_cumMv <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', treatmentLevels = NA, title = NA, start = NA, end = nrow(speed), sampling = 100){
+plot.flyMv_cumMv <- function(trak, time = 'min', treatmentLevels = NA, title = NA, start = NA, end = nrow(speed), sampling = 100){
+  
+  #Naming to clean up later code implementation
+  speed <- trak@speed
+  hz <- trak@hz
+  treatments <- trak@metadata$Treatment
+  sex <- trak@metadata$Male
+  
   if(time == 'min'){
     timeFactor <- 60
     if(end != nrow(speed)){
@@ -170,9 +177,16 @@ plot.flyMv_cumMv <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'm
 
 
 
-plot.flyMv_rollAvg <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', 
+plot.flyMv_rollAvg <- function(trak, time = 'min', 
                                treatmentLevels = NA, title = NA, 
                                width = 5*60^2, by = 5*60*30, ...){
+  
+  #Naming to clean up code
+  speed <- trak@speed
+  hz <- trak@hz
+  treatments <- trak@metadata$Treatment
+  sex <- trak@metadata$Male
+  
   if(time == 'min'){
     framesPerTime <- hz*60
   }
@@ -261,13 +275,17 @@ plot.flyMovement_plate <- function(speed, nRows = 4, nCols = 6, colRange = c("bl
 
 
 
-plot.highlightBouts <- function(speed,sleepActivity = flies.sleepActivity(speed = as.data.frame(speed), erroneousSleepDataThreshold = 0), flyNumber = 1, start = 1, end = 5, hz = 5, timeScale = "s", plots = "both", ...){
+plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeScale = "s", plots = "both", ...){
   #timeScale('h', 'm' or 's') gives timescale of plotting. Default is 's'
   #start is start time in units of timeScale(e.g. 5 with 'h' is start at hour 5). Default is 1
   #end is end time in units of timeScale as above. Default is 5
   #plots is the type of plot output("both", "sleep" or "movement"). Default is "both"
   #hz is hz used in data collection
   #flyNumber is the index of the fly you are interested in
+  
+  speed <- trak@speed
+  sleepActivity <- trak@activity
+  hz = trak@hz
   
   if(timeScale == "h"){
     plotFactor = hz*60^2
@@ -281,14 +299,13 @@ plot.highlightBouts <- function(speed,sleepActivity = flies.sleepActivity(speed 
   s <- 1:nrow(speed)/plotFactor
   
   #Additional arguments?
-  arg <- list(...)
   
   if(plots == "both"){
     if(any(c('xlab', 'ylab') %in% names(arg)))
       plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', ...)
     else
-      plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
-    
+      plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed')
+    print("in")
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
     rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
@@ -330,9 +347,14 @@ plot.highlightBouts <- function(speed,sleepActivity = flies.sleepActivity(speed 
 
 
 
-plot.flyMv_rollNoMov <- function(speed, sex = NA, treatments = NA, hz = 5, time = 'min', 
+plot.flyMv_rollNoMov <- function(trak, time = 'min', 
                                  treatmentLevels = NA, title = NA, 
                                  width, by = 1, ...){
+  speed <- trak@speed
+  treatments <- trak@metadata$Treatment
+  sex <- trak@metadata$Male
+  hz <- trak@hz
+  
   if(!require(zoo))
     stop('Can\'t load package zoo')
   if(time == 'min')
@@ -387,6 +409,12 @@ plot.flyMv_rollNoMov <- function(speed, sex = NA, treatments = NA, hz = 5, time 
 
 
 plot.flyMv_survival <- function(activity, treatments = NA, time = 'h', hz = 5, treatmentLevels = NA, experimentLength = NA){
+  
+  #Naming to clean up code
+  activity <- trak@activity
+  hz <- trak@hz
+  treatments <- trak@metadata$Treatment
+  
   #TO DO: support for just one group
   if(time == 'min')
     framesPerTime <- hz*60
@@ -443,7 +471,11 @@ plot.flyMv_survival <- function(activity, treatments = NA, time = 'h', hz = 5, t
 
 
 
-plot.flyMv_avgSleepLength <- function(activity, treatments = NA, treatmentLevels = NA, test = NA){
+plot.flyMv_avgSleepLength <- function(trak, treatmentLevels = NA, test = NA){
+  #Naming to clean up code
+  acivity <- trak@activity
+  treatments = trak@metadata$Treatment
+  
   # treatment.avgSleep <- sapply(activity[treatment], FUN = function(x){mean(x$sleepLengths)})/60
   # control.avgSleep <- sapply(activity[!treatment], FUN = function(x){mean(x$sleepLengths)})/60
   treatments <- as.factor(treatments)
@@ -481,7 +513,11 @@ plot.flyMv_avgSleepLength <- function(activity, treatments = NA, treatmentLevels
 
 
 
-plot.flyMv_sleepNr <- function(activity, treatments = NA, treatmentLevels = NA, test = 'wilcox'){
+plot.flyMv_sleepNr <- function(trak, treatmentLevels = NA, test = 'wilcox'){
+  #Naming to clean up code
+  activity <- trak@activity
+  treatments = trak@metadata$Treatment
+  
   treatments <- as.factor(treatments)
   activity_treatments <- split(activity, treatments)
   avgSleep <- list()
@@ -517,7 +553,11 @@ plot.flyMv_sleepNr <- function(activity, treatments = NA, treatmentLevels = NA, 
 
 
 
-plot.flyMv_avgMvLength <- function(activity, treatments = NA, treatmentLevels = NA, test = 'wilcox'){
+plot.flyMv_avgMvLength <- function(trak, treatmentLevels = NA, test = 'wilcox'){
+  #Naming
+  activity <- trak@activity
+  treatments = trak@metadata$Treatment
+  
   treatments <- as.factor(treatments)
   activity_treatments <- split(activity, treatments)
   avgSleep <- list()
