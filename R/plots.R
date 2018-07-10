@@ -305,7 +305,6 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
       plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', ...)
     else
       plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed')
-    print("in")
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
     rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
