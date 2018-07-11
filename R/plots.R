@@ -590,8 +590,11 @@ plot.flyMv_avgMvLength <- function(trak, treatmentLevels = NA, test = 'wilcox'){
   }
 }
 
-plot.gxeBoxes <- function(activity, meta, control = FALSE, treatment = TRUE, trait = 'avgMvLength'){
+plot.gxeBoxes <- function(trak, control = FALSE, treatment = TRUE, trait = 'avgMvLength'){
   #Genotype x Environment visualization example
+  activity <- trak@activity
+  meta <-trak@metadata
+  
   flies <- activity
   y = c()
   if(trait == "avgMvLength"){
