@@ -8,7 +8,7 @@
 #plot.flyMv_avgSleepLength
 #plot.flyMv_sleepNr
 #plot.flyMv_avgMvLength
-#plot.gXeBox
+#plot.gXeBoxes
 #
 #
 #
@@ -589,11 +589,11 @@ plot.flyMv_avgMvLength <- function(trak, treatmentLevels = NA, test = 'wilcox'){
     legend('topleft', paste('p =', round(p, digits = 3)), title = 'Anova')
   }
 }
-
+#Note,
 plot.gxeBoxes <- function(trak, control = FALSE, treatment = TRUE, trait = 'avgMvLength'){
   #Genotype x Environment visualization example
+  meta <- trak@metadata
   activity <- trak@activity
-  meta <-trak@metadata
   
   flies <- activity
   y = c()
@@ -633,10 +633,13 @@ plot.gxeBoxes <- function(trak, control = FALSE, treatment = TRUE, trait = 'avgM
   tmp <- seq(1, length(box$names)*spacing/2, spacing)
   at = sort(c(tmp, tmp+1))
   #png(filename = paste('GxE_', trait, '_raw.png', sep = ''), width = 1200, height = 800)
+  
   bxp(box.newOrder, boxfill = cols, xaxt = 'n', at = at)
-  grid(nx = 26, ny = 26) #nx = 52, ny = 52
-  bxp(box.newOrder, boxfill = cols, xaxt = 'n', at = at, add = T)
   labels <- gsub(pattern = '(.*)\\..*', replacement = '\\1', x = box.newOrder$names)[seq(1, length(box.newOrder$names), 2)]
+  grid(nx = length(labels)*2, ny = length(labels)*2) #nx = 52, ny = 52
+  
+  bxp(box.newOrder, boxfill = cols, xaxt = 'n', at = at, add = T)
+  
   axis(side = 1, at = seq(1.5, length(box$names)*spacing/2 - .5, spacing), labels = labels, las = 2)
   mtext(trait, side = 2, cex = 2, line = 2.5)
   #TODO - SW - Fix labeling
@@ -644,6 +647,6 @@ plot.gxeBoxes <- function(trak, control = FALSE, treatment = TRUE, trait = 'avgM
   #Legend with R2s
   legend <- c(as.expression(bquote(R2[add] ~ '=' ~ .(familyPlusRot.r2))), 
               as.expression(bquote(R2[int] ~ '=' ~ .(familyTimesRot.r2))))
-  legend(x = 'topleft', legend = legend, title = 'Variance Explained', cex = 2)
+  legend(x = 'topleft', legend = legend, title = 'Variance Explained', cex = 1)
   #dev.off()
 }
