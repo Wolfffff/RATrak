@@ -17,18 +17,19 @@ lmp <- function (modelobject) {
   return(p)
 }
 
-readInfo <- function(speedBinFileName, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5){
+readInfo <- function(speedBinFileName, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5, inferPhenos = T){
   trak <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", hz = "numeric"))
   speed <- readBinary(speedBinFileName, wellCount, start, end)
   metadata <- readMetadata(metadataFileName, start, end)
   data <- trak(speed=speed,metadata=metadata,hz=hz)
-  data <- flies.sleepActivity(data)
+  if(inferPhenos)
+    data <- flies.sleepActivity(data)
   return(data)
 }
 
 readBinary <- function(fileName, colCount, start = 1, end = colCount){
   file <- file(fileName, "rb")
-  mat <- matrix(readBin(file, numeric(), n= 9999999, size=4),ncol = colCount,byrow = TRUE)
+  mat <- matrix(readBin(file, numeric(), n= 1e8, size=4),ncol = colCount,byrow = TRUE)
   return(as.data.frame(mat[,start:end]))
 }
 
