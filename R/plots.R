@@ -179,7 +179,7 @@ plot.flyMv_cumMv <- function(trak, time = 'min', treatmentLevels = NA, title = N
 
 plot.flyMv_rollAvg <- function(trak, time = 'min', 
                                treatmentLevels = NA, title = NA, 
-                               width = 5*60^2, by = 5*60*30, ...){
+                               width = 5*60^2, by = 5*60*30, legend.treat = 'topright', legend.sex = 'top', returnAvgSpeed = F, ...){
   
   #Naming to clean up code
   speed <- trak@speed
@@ -237,10 +237,14 @@ plot.flyMv_rollAvg <- function(trak, time = 'min',
   mtext('Average speed per window', side = 2, cex = 2, line = 2)
   
   #Legends
-  if(!is.na(treatmentLevels[1]))
-    legend('topright', treatmentLevels, col = cols.palette, cex = 2, pch = 19)
-  if(!is.na(sex[1]))
-    legend('top', c('Male', 'Female'), lty = 2:1, cex = 2)  
+  if(!is.na(treatmentLevels[1]) & legend.treat != 'n')
+    legend(legend.treat, treatmentLevels, col = cols.palette, cex = 2, pch = 19)
+  if(!is.na(sex[1]) & legend.sex != 'n')
+    legend(legend.sex, c('Male', 'Female'), lty = 2:1, cex = 2)
+  
+  if(returnAvgSpeed){
+    return(data.frame(speed.avg, time = t))
+  }
 }
 
 #Experimental function

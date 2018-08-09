@@ -246,7 +246,7 @@ flies.avgByGroup <- function(trak, sex = T, treatments = T) {
     for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
       speed.groupAvg[,i] <- rowMeans(as.matrix(speed[, treatments == treatments.uniq[i]]))
       groupedTreatments[i] = as.character(treatments.uniq[i])    
-      }
+    }
   }
   class <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", hz = "numeric"))
   

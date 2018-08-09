@@ -30,6 +30,7 @@ readInfo <- function(speedBinFileName, metadataFileName, wellCount, start = 1, e
 readBinary <- function(fileName, colCount, start = 1, end = colCount){
   file <- file(fileName, "rb")
   mat <- matrix(readBin(file, numeric(), n= 1e8, size=4),ncol = colCount,byrow = TRUE)
+  close(file)
   return(as.data.frame(mat[,start:end]))
 }
 
