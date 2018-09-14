@@ -13,7 +13,7 @@
 #
 #
 
-plot.flyMv_mvNr <- function(trak, treatmentLevels = NA, test = 'wilcox'){
+plot.flyMv_mvNr <- function(trak, treatmentLevels = NA, test = 'wilcox', ...){
   #Naming
   activity <- trak@activity
   treatments = trak@metadata$Treatment
@@ -27,7 +27,7 @@ plot.flyMv_mvNr <- function(trak, treatmentLevels = NA, test = 'wilcox'){
   if(is.na(treatmentLevels[1]))
     treatmentLevels <- paste('group', levels(treatments))
   
-  box <- boxplot(avgSleep, xaxt = 'n', frame = F)
+  box <- boxplot(avgSleep, xaxt = 'n', frame = F, ...)
   axis(side = 1, at = 1:nlevels(treatments), labels = treatmentLevels, cex.axis = 2)
   mtext(side = 2, text = 'Number of movement bouts', cex = 2, line = 2)
   
@@ -205,7 +205,7 @@ plot.flyMv_rollAvg <- function(trak, time = 'min',
   #Color for treatment
   if(!is.na(treatments[1])){
     # cols.palette <- rainbow(length(unique(treatments)))
-    cols.palette <- wes_palette(name = 'Cavalcanti1', n = length(unique(treatments)), type = 'discrete')
+    cols.palette <- wes_palette(name = 'Cavalcanti1', n = length(unique(treatments)), type = 'continuous')
     tmp <- as.factor(treatments)
     cols <- cols.palette[tmp]
     
@@ -567,7 +567,7 @@ plot.flyMv_avgMvLength <- function(trak, treatmentLevels = NA, test = 'wilcox'){
   hz <- trak@hz
   
   treatments <- as.factor(treatments)
-  activity_treatments <- split(activity, treatments)
+  activity_treatments <- split(activity, treatments) #WARNING: we need to make sure that the order in activity_treatments matches the x-axis
   avgSleep <- list()
   for(i in 1:length(activity_treatments))
     avgSleep[[i]] <- sapply(activity_treatments[[i]], FUN = function(x){mean(x$mvLengths)})/hz
@@ -592,7 +592,7 @@ plot.flyMv_avgMvLength <- function(trak, treatmentLevels = NA, test = 'wilcox'){
     }
   }
   if(nlevels(treatments) > 2 & !is.na(test)){
-    model <- lm(unlist(avgSleep) ~ as.factor(treatments))
+    model <- lm(unlist(avgSleep) ~ treatments)
     p <- lmp(model)
     # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
     legend('topleft', paste('p =', round(p, digits = 3)), title = 'Anova')
