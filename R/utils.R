@@ -17,11 +17,12 @@ lmp <- function (modelobject) {
   return(p)
 }
 
+.trak <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", hz = "numeric"))
+
 readInfo <- function(speedBinFileName, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5, inferPhenos = T){
-  trak <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", hz = "numeric"))
   speed <- readBinary(speedBinFileName, wellCount, start, end)
   metadata <- readMetadata(metadataFileName, start, end)
-  data <- trak(speed=speed,metadata=metadata,hz=hz)
+  data <- .trak(speed=speed,metadata=metadata,hz=hz)
   if(inferPhenos)
     data <- flies.sleepActivity(data)
   return(data)
@@ -35,7 +36,17 @@ readBinary <- function(fileName, colCount, start = 1, end = colCount){
 }
 
 readMetadata <- function(fileName, start = 1, end){
-  meta <- read.csv(fileName,header = TRUE)
+  #Determine field separator
+  L <- readLines(fileName, n = 1)
+  if (grepl(";", L))
+    meta <- read.table(fileName, header = TRUE, sep = ';')
+  else if (grepl(",", L))
+    meta <- read.table(fileName, header = TRUE, sep = ',')
+  else if (grepl("\t", L))
+    meta <- read.table(fileName, header = TRUE, sep = '\t')
+  else
+    stop(paste('Could not determine field separator in', fileName))
+  
   meta$Treatment <- as.vector(meta$Treatment)
   data = meta[start:end,]
   return(data)
