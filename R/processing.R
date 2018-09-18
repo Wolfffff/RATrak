@@ -6,18 +6,17 @@
 #
 
 
-flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 3, hz = 5, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, smoothingFactor = 10){
+flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvThreshold = 3, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, smoothingFactor = 10){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
   #mvThreshold = threshold to call bout of continous movement. Default 2s
-  #hz = movement aquisition rate. Default 5 Hz
   #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
   #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
   #erroneous(Sleep/Movement)DataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
-  sleepMin <- sleepThreshold*hz
-  deadMin <- deathThreshold*hz
-  mvMin <- mvThreshold*hz
-  errorMin <- errorThreshold*hz
+  sleepMin <- sleepThreshold*trak@hz
+  deadMin <- deathThreshold*trak@hz
+  mvMin <- mvThreshold*trak@hz
+  errorMin <- errorThreshold*trak@hz
   
   #Naming
   speed <- trak@speed

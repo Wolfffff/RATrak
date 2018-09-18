@@ -412,7 +412,7 @@ plot.flyMv_rollNoMov <- function(trak, time = 'min',
 
 
 
-plot.flyMv_survival <- function(trak, treatments = NA, time = 'h', hz = 5, treatmentLevels = NA, experimentLength = NA, legend.title = '', palette = 'wes'){
+plot.flyMv_survival <- function(trak, treatments = NA, time = 'h', treatmentLevels = NA, experimentLength = NA, legend.title = '', palette = 'wes'){
   
   #Naming to clean up code
   activity <- trak@activity
