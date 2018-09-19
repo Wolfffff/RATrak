@@ -265,7 +265,10 @@ flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
     timeFactor = trak@hz
   }
   start <- start*timeFactor
-  end <- end*timeFactor
+  if(end == 'end')
+    end <- nrow(trak@speed) + 1
+  else
+    end <- end*timeFactor
   
   activity.window <- list()
   for(i in 1:length(trak@activity)){
@@ -275,9 +278,9 @@ flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
     if(length(unique(mvBoutNrs)) != 1)
       stop(paste('Inconsistent movement data for individual ', i, '. length(mvStartTimes), length(mvLengths), and length(boutSpeeds) differ', sep = ''))
     
-    sleepInWindow <- trak@activity[[i]]$sleepStartTimes > start & trak@activity[[i]]$sleepStartTimes < end
-    mvInWindow <- trak@activity[[i]]$mvStartTimes > start & trak@activity[[i]]$mvStartTimes < end
-    if(!is.na(trak@activity[[i]]$dead) & (trak@activity[[i]]$dead > start & trak@activity[[i]]$dead < end))
+    sleepInWindow <- trak@activity[[i]]$sleepStartTimes > start & trak@activity[[i]]$sleepStartTimes <= end
+    mvInWindow <- trak@activity[[i]]$mvStartTimes > start & trak@activity[[i]]$mvStartTimes <= end
+    if(!is.na(trak@activity[[i]]$dead) & (trak@activity[[i]]$dead > start & trak@activity[[i]]$dead <= end))
       dead <- trak@activity[[i]]$dead
     else
       dead <- NA
@@ -295,5 +298,7 @@ flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
   trak@activity <- activity.window
   if(!returnSpeed)
     trak@speed <- data.frame()
+  else
+    trak@speed <- trak@speed[start:end, ]
   return(trak)
 }
