@@ -97,8 +97,13 @@ flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.
         dead <- NA
 
         if(sleepIndexes[1] == 1){ #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
-          sleepStartTimes <- sapply(sleepIndexes[2:length(sleepIndexes)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
-          sleepStartTimes <- c(1, sleepStartTimes)
+          if(length(sleepIndexes) == 1){ #The rare case of only one sleep bout, starting at timepoint 1
+            sleepStartTimes <- 1
+          }
+          else{
+            sleepStartTimes <- sapply(sleepIndexes[2:length(sleepIndexes)], function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the movement start == movement start frame
+            sleepStartTimes <- c(1, sleepStartTimes)
+          }
         }
         else{
           sleepStartTimes <- sapply(sleepIndexes, function(x){ sum(movement$lengths[1:(x-1)]) } ) #Sum of every run length up to the sleep start == sleep start frame
