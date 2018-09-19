@@ -254,3 +254,46 @@ flies.avgByGroup <- function(trak, sex = T, treatments = T) {
   return(output)
 }
 
+
+flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
+  #Convenience function to extract activity phenotypes within a time window from a trak object
+  if(timeScale == "h"){
+    timeFactor = trak@hz*60^2
+  }else if(timeScale == "m"){
+    timeFactor = trak@hz*60
+  }else{
+    timeFactor = trak@hz
+  }
+  start <- start*timeFactor
+  end <- end*timeFactor
+  
+  activity.window <- list()
+  for(i in 1:length(trak@activity)){
+    if(length(trak@activity[[i]]$sleepStartTimes) != length(trak@activity[[i]]$sleepLengths))
+      stop(paste('Inconsistent sleep data for individual ', i, '. length(sleepStartTimes) != length(sleepLengths)', sep = ''))
+    mvBoutNrs <- c(length(trak@activity[[i]]$mvStartTimes), length(trak@activity[[i]]$mvLengths), length(trak@activity[[i]]$boutSpeeds))
+    if(length(unique(mvBoutNrs)) != 1)
+      stop(paste('Inconsistent movement data for individual ', i, '. length(mvStartTimes), length(mvLengths), and length(boutSpeeds) differ', sep = ''))
+    
+    sleepInWindow <- trak@activity[[i]]$sleepStartTimes > start & trak@activity[[i]]$sleepStartTimes < end
+    mvInWindow <- trak@activity[[i]]$mvStartTimes > start & trak@activity[[i]]$mvStartTimes < end
+    if(!is.na(trak@activity[[i]]$dead) & (trak@activity[[i]]$dead > start & trak@activity[[i]]$dead < end))
+      dead <- trak@activity[[i]]$dead
+    else
+      dead <- NA
+    
+    
+    activity.window[[i]] <- list(sleepLengths = trak@activity[[i]]$sleepLengths[sleepInWindow], 
+                                 sleepNr = sum(sleepInWindow), 
+                                 sleepStartTimes = trak@activity[[i]]$sleepStartTimes[sleepInWindow],
+                                 mvLengths = trak@activity[[i]]$mvLengths[mvInWindow], 
+                                 mvNr = sum(mvInWindow), 
+                                 mvStartTimes = trak@activity[[i]]$mvStartTimes[mvInWindow], 
+                                 dead = dead, 
+                                 boutSpeeds = trak@activity[[i]]$boutSpeeds[mvInWindow])
+  }
+  trak@activity <- activity.window
+  if(!returnSpeed)
+    trak@speed <- data.frame()
+  return(trak)
+}
