@@ -15,7 +15,7 @@
 
 plot.flyMv_mvNr <- function(trak, treatmentLevels = NA, test = 'wilcox', ...){
   #Naming
-  activity <- trak@activity
+  activity <- trak@activity$result
   treatments = trak@metadata$Treatment
   
   treatments <- as.factor(treatments)
@@ -154,7 +154,7 @@ plot.flyMv_cumMv <- function(trak, time = 'min', treatmentLevels = NA, title = N
   ltys <- rep(2, ncol(speed)) #Lty's don't work because of density on big sets
   if(!is.na(sex[1])) #Assumes sex = logical vector. T == male
     ltys[sex] <- 1 #We also use this to define
-
+  
   plot(t, speed.cumDist[sample,1], type = 'l', ylim = c(0, max(speed.cumDist)), ylab = '', xlab = '', col = cols[1],lty = ltys[1], lwd = ltys[1])
   for(i in 2:ncol(speed.cumDist)){
     points(t, speed.cumDist[sample,i], type = 'l', ylim = c(0, max(speed.cumDist)), col = cols[i], lty = ltys[i], lwd = ltys[i])
@@ -270,7 +270,7 @@ plot.flyMovement_plate <- function(speed, nRows = 4, nCols = 6, colRange = c("bl
     sortedLabels = tail(possibleLabels, n=nRows)
     axis(side = 2, at = 1:nRows, labels = sortedLabels)
     ColorLegend(x=(nCols + 1), y=nRows,height=(nRows-1),width=.5,labels=c("Min", "Max"), col=pal(100))
-    }
+  }
   else{
     stop("Rows multiplied by columns is not equal to the number of columns in speed.")
   }
@@ -279,7 +279,7 @@ plot.flyMovement_plate <- function(speed, nRows = 4, nCols = 6, colRange = c("bl
 
 
 
-plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeScale = "s", plots = "both", ...){
+plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeScale = "s", plots = "both", returnData = F, ...){
   #timeScale('h', 'm' or 's') gives timescale of plotting. Default is 's'
   #start is start time in units of timeScale(e.g. 5 with 'h' is start at hour 5). Default is 1
   #end is end time in units of timeScale as above. Default is 5
@@ -288,19 +288,23 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
   #flyNumber is the index of the fly you are interested in
   
   speed <- trak@speed
-  sleepActivity <- trak@activity
+  sleepActivity <- trak@activity$result
   hz = trak@hz
   
   if(timeScale == "h"){
     plotFactor = hz*60^2
   }else if(timeScale == "m"){
     plotFactor = hz*60
+  }else if(timeScale == "frames"){
+    plotFactor = 1
   }else{
     plotFactor = hz
   }
   start <- start*plotFactor
   end <- end*plotFactor
   s <- 1:nrow(speed)/plotFactor
+  if(returnData)
+    out <- data.frame(time = s[start:end], speed = as.data.frame(speed)[start:end, flyNumber])
   
   #Additional arguments?
   arg <- list(...)
@@ -309,18 +313,18 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
     if(any(c('xlab', 'ylab') %in% names(arg)))
       plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', ...)
     else
-      plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed')
+      plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
     rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
     #Movement
-    rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
-    for(i in 1:length( sleepActivity[[flyNumber]]$mvStartTimes )){
-      start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor
-      end <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvLengths[i]/plotFactor
+    rect(xleft = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
+    for(i in 1:length( sleepActivity[[flyNumber]]$mvBouts.startTimes )){
+      start <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i]/plotFactor
+      end <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths[i]/plotFactor
       
       
-      avgSpeed <- sleepActivity[[flyNumber]]$boutSpeeds[i]
+      avgSpeed <- sleepActivity[[flyNumber]]$mvBouts.avgSpeed[i]
       lines(x = c(start, end), y = c(avgSpeed, avgSpeed), col = 'blue', lwd = 3)
     }
   }
@@ -330,11 +334,11 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
     else
       plot(s[start:end], speed[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     
-    rect(xleft = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvStartTimes/plotFactor + sleepActivity[[flyNumber]]$mvLengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
-    for(i in 1:length( sleepActivity[[flyNumber]]$mvStartTimes )){
-      start <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor
-      end <- sleepActivity[[flyNumber]]$mvStartTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvLengths[i]/plotFactor
-      avgSpeed <- sleepActivity[[flyNumber]]$boutSpeeds[i]
+    rect(xleft = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
+    for(i in 1:length( sleepActivity[[flyNumber]]$mvBouts.startTimes )){
+      start <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i]/plotFactor
+      end <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths[i]/plotFactor
+      avgSpeed <- sleepActivity[[flyNumber]]$mvBouts.avgSpeed[i]
       lines(x = c(start, end), y = c(avgSpeed, avgSpeed), col = 'blue', lwd = 3)
     }
   }
@@ -347,6 +351,8 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
     rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 100))
   }
+  if(returnData)
+    return(out)
 }
 
 
@@ -415,7 +421,7 @@ plot.flyMv_rollNoMov <- function(trak, time = 'min',
 plot.flyMv_survival <- function(trak, treatments = NA, time = 'h', treatmentLevels = NA, experimentLength = NA, legend.title = '', palette = 'wes'){
   
   #Naming to clean up code
-  activity <- trak@activity
+  activity <- trak@activity$result
   hz <- trak@hz
   treatments <- trak@metadata$Treatment
   
@@ -479,7 +485,7 @@ plot.flyMv_survival <- function(trak, treatments = NA, time = 'h', treatmentLeve
 
 plot.flyMv_avgSleepLength <- function(trak, treatmentLevels = NA, test = 'wilcox', ...){
   #Naming to clean up code
-  activity <- trak@activity
+  activity <- trak@activity$result
   treatments = trak@metadata$Treatment
   hz <- trak@hz
   
@@ -522,7 +528,7 @@ plot.flyMv_avgSleepLength <- function(trak, treatmentLevels = NA, test = 'wilcox
 
 plot.flyMv_sleepNr <- function(trak, treatmentLevels = NA, test = 'wilcox'){
   #Naming to clean up code
-  activity <- trak@activity
+  activity <- trak@activity$result
   treatments = trak@metadata$Treatment
   
   treatments <- as.factor(treatments)
@@ -562,7 +568,7 @@ plot.flyMv_sleepNr <- function(trak, treatmentLevels = NA, test = 'wilcox'){
 
 plot.flyMv_avgMvLength <- function(trak, treatmentLevels = NA, test = 'wilcox'){
   #Naming
-  activity <- trak@activity
+  activity <- trak@activity$result
   treatments = trak@metadata$Treatment
   hz <- trak@hz
   
@@ -570,7 +576,7 @@ plot.flyMv_avgMvLength <- function(trak, treatmentLevels = NA, test = 'wilcox'){
   activity_treatments <- split(activity, treatments) #WARNING: we need to make sure that the order in activity_treatments matches the x-axis
   avgSleep <- list()
   for(i in 1:length(activity_treatments))
-    avgSleep[[i]] <- sapply(activity_treatments[[i]], FUN = function(x){mean(x$mvLengths)})/hz
+    avgSleep[[i]] <- sapply(activity_treatments[[i]], FUN = function(x){mean(x$mvBouts.lengths)})/hz
   
   if(is.na(treatmentLevels[1]))
     treatmentLevels <- paste('group', levels(treatments))
@@ -602,14 +608,14 @@ plot.flyMv_avgMvLength <- function(trak, treatmentLevels = NA, test = 'wilcox'){
 plot.gxeBoxes <- function(trak, control = FALSE, treatment = TRUE, trait = 'avgMvLength'){
   #Genotype x Environment visualization example
   meta <- trak@metadata
-  activity <- trak@activity
+  activity <- trak@activity$result
   
   flies <- activity
   y = c()
   if(trait == "avgMvLength"){
     for (i in 1:length(activity)) {
-      if (!is.na(activity[[i]]$mvLengths[1])) {
-        y[i] <- mean(activity[[i]]$mvLengths)
+      if (!is.na(activity[[i]]$mvBouts.lengths[1])) {
+        y[i] <- mean(activity[[i]]$mvBouts.lengths)
       }
       else{
         y[i] <- 0
