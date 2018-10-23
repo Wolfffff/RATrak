@@ -17,39 +17,47 @@ lmp <- function (modelobject) {
   return(p)
 }
 
-.trak <- setClass("trak", slots = c(speed="data.frame", activity="list",metadata = "data.frame", hz = "numeric"))
+.trak <- setClass(Class = "trak", slots = c(speed = "data.frame", centroid = "data.frame", activity = "list", metadata = "data.frame", hz = "numeric"), package = 'RATrak')
 
-readInfo <- function(speedBinFileName, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5, inferPhenos = T){
-  speed <- readBinary(speedBinFileName, wellCount, start, end)
+readInfo <- function(speedBinFileName = NULL, centroidBinFileName = NULL, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5, inferPhenos = T){
+  if(is.null(centroidBinFileName) & !is.null(speedBinFileName)){
+    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
+    centroid <- data.frame()
+  }
+  else if(!is.null(centroidBinFileName) & !is.null(speedBinFileName)){  
+    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
+    centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid') 
+  }
+  else if(!is.null(centroidBinFileName) & is.null(speedBinFileName)){
+    print('No speed data provided. Calculating speed from centroid data')
+    centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid') 
+    # speed <- flies.calculateSpeed(centroid) #fix
+  }
+  else
+    stop('Neither speedBinFileName or centroidBinFileName was provided')
+  
   metadata <- readMetadata(metadataFileName, start, end)
-  data <- .trak(speed=speed,metadata=metadata,hz=hz)
+  data <- .trak(speed=speed, centroid=centroid, metadata=metadata, hz=hz)
   if(inferPhenos)
     data <- flies.sleepActivity(data)
   return(data)
 }
 
-readBinary <- function(fileName, colCount, start = 1, end = colCount){
+readBinary <- function(fileName, colCount, dataType){
   file <- file(fileName, "rb")
-  mat <- matrix(readBin(file, numeric(), n= 1e8, size=4),ncol = colCount,byrow = TRUE)
+  if(dataType == 'speed')
+    mat <- matrix(readBin(file, numeric(), n = 1e8, size = 4), ncol = colCount, byrow = TRUE)
+  else if(dataType == 'centroid'){
+    mat.tmp <- matrix(readBin(file, numeric(), n = 1e8, size = 8), ncol = colCount*2, byrow = TRUE)
+    #Reshape matrix
+    mat <- matrix(ncol = ncol(mat.tmp), nrow = nrow(mat.tmp))
+    xCols <- seq(from = 1, to = ncol(mat.tmp) - 1, by = 2)
+    yCols <- seq(from = 2, to = ncol(mat.tmp), by = 2)
+    mat[, xCols] <- mat.tmp[, 1:colCount]
+    mat[, yCols] <- mat.tmp[, (colCount+1):(colCount*2)]
+  }
   close(file)
-  return(as.data.frame(mat[,start:end]))
-}
-
-readMetadata <- function(fileName, start = 1, end){
-  #Determine field separator
-  L <- readLines(fileName, n = 1)
-  if (grepl(";", L))
-    meta <- read.table(fileName, header = TRUE, sep = ';')
-  else if (grepl(",", L))
-    meta <- read.table(fileName, header = TRUE, sep = ',')
-  else if (grepl("\t", L))
-    meta <- read.table(fileName, header = TRUE, sep = '\t')
-  else
-    stop(paste('Could not determine field separator in', fileName))
-  
-  meta$Treatment <- as.vector(meta$Treatment)
-  data = meta[start:end,]
-  return(data)
+  return(as.data.frame(mat))
 }
 
 
