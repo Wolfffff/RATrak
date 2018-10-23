@@ -325,3 +325,18 @@ flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
     trak@speed <- trak@speed[start:end, ]
   return(trak)
 }
+
+flies.calculateSpeed <- function(centroid, hz){
+  if(ncol(centroid) %% 2 != 0)
+    stop('centroid matrix has uneven number of columns. It should contain xy coordinates in separate columns')
+  
+  speed <- data.frame(matrix(nrow = nrow(centroid)-1, ncol = nWells))
+  samples <- seq(from = 1, to = ncol(centroid) - 1, by = 2)
+  j <- 1
+  for(i in samples){
+    speed[,j] <- sqrt(rowSums( diff(centroid[, i:(i+1)])^2 ))
+    j <- j+1
+  }
+  return(speed*hz) #Rescale speed to units of pixel/s 
+}
+

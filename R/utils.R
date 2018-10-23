@@ -31,7 +31,7 @@ readInfo <- function(speedBinFileName = NULL, centroidBinFileName = NULL, metada
   else if(!is.null(centroidBinFileName) & is.null(speedBinFileName)){
     print('No speed data provided. Calculating speed from centroid data')
     centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid') 
-    # speed <- flies.calculateSpeed(centroid) #fix
+    speed <- flies.calculateSpeed(as.matrix(centroid), hz = hz)
   }
   else
     stop('Neither speedBinFileName or centroidBinFileName was provided')
