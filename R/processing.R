@@ -330,7 +330,7 @@ flies.calculateSpeed <- function(centroid, hz){
   if(ncol(centroid) %% 2 != 0)
     stop('centroid matrix has uneven number of columns. It should contain xy coordinates in separate columns')
   
-  speed <- data.frame(matrix(nrow = nrow(centroid)-1, ncol = nWells))
+  speed <- data.frame(matrix(nrow = nrow(centroid)-1, ncol = ncol(centroid)/2))
   samples <- seq(from = 1, to = ncol(centroid) - 1, by = 2)
   j <- 1
   for(i in samples){

@@ -60,6 +60,23 @@ readBinary <- function(fileName, colCount, dataType){
   return(as.data.frame(mat))
 }
 
+readMetadata <- function(fileName, start = 1, end){
+  #Determine field separator
+  L <- readLines(fileName, n = 1)
+  if (grepl(";", L))
+    meta <- read.table(fileName, header = TRUE, sep = ';')
+  else if (grepl(",", L))
+    meta <- read.table(fileName, header = TRUE, sep = ',')
+  else if (grepl("\t", L))
+    meta <- read.table(fileName, header = TRUE, sep = '\t')
+  else
+    stop(paste('Could not determine field separator in', fileName))
+  
+  meta$Treatment <- as.vector(meta$Treatment)
+  data = meta[start:end,]
+  return(data)
+}
+
 
 
 #This script provides a quick way to group load packages - it's not needed in the package but could be useful for end users in other applications
