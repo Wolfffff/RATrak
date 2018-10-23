@@ -337,6 +337,8 @@ flies.calculateSpeed <- function(centroid, hz){
     speed[,j] <- sqrt(rowSums( diff(centroid[, i:(i+1)])^2 ))
     j <- j+1
   }
-  return(speed*hz) #Rescale speed to units of pixel/s 
+  #Discard the first few frames and rescale speed to units of pixel/s 
+  speed <- speed[3:nrow(speed), ]*hz
+  return(speed) 
 }
 
