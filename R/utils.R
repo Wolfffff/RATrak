@@ -21,17 +21,17 @@ lmp <- function (modelobject) {
 
 readInfo <- function(speedBinFileName = NULL, centroidBinFileName = NULL, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5, inferPhenos = T){
   if(is.null(centroidBinFileName) & !is.null(speedBinFileName)){
-    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
+    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')/hz
     centroid <- data.frame()
   }
   else if(!is.null(centroidBinFileName) & !is.null(speedBinFileName)){  
-    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
+    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')/hz
     centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid') 
   }
   else if(!is.null(centroidBinFileName) & is.null(speedBinFileName)){
     print('No speed data provided. Calculating speed from centroid data')
     centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid') 
-    speed <- flies.calculateSpeed(as.matrix(centroid), hz = hz)
+    speed <- flies.calculateSpeed(as.matrix(centroid))
   }
   else
     stop('Neither speedBinFileName or centroidBinFileName was provided')
@@ -45,8 +45,10 @@ readInfo <- function(speedBinFileName = NULL, centroidBinFileName = NULL, metada
 
 readBinary <- function(fileName, colCount, dataType){
   file <- file(fileName, "rb")
-  if(dataType == 'speed')
+  if(dataType == 'speed'){
     mat <- matrix(readBin(file, numeric(), n = 1e8, size = 4), ncol = colCount, byrow = TRUE)
+    mat <- mat[4:nrow(mat), ] #Discard first few frames
+  }
   else if(dataType == 'centroid'){
     mat.tmp <- matrix(readBin(file, numeric(), n = 1e8, size = 8), ncol = colCount*2, byrow = TRUE)
     #Reshape matrix
@@ -55,6 +57,7 @@ readBinary <- function(fileName, colCount, dataType){
     yCols <- seq(from = 2, to = ncol(mat.tmp), by = 2)
     mat[, xCols] <- mat.tmp[, 1:colCount]
     mat[, yCols] <- mat.tmp[, (colCount+1):(colCount*2)]
+    mat <- mat[3:nrow(mat), ] #Discard first few frames
   }
   close(file)
   return(as.data.frame(mat))

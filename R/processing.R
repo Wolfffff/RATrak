@@ -20,6 +20,7 @@ flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.
   mvSpaceMin <- mvSpacerThreshold*trak@hz
   errorMin <- errorThreshold*trak@hz
   
+    
   #Naming
   speed <- trak@speed
   
@@ -140,8 +141,8 @@ flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.
       for(j in 1:length(mvSpacers.idx)){ #Are there some clever vectorized solution to this? 
         end.idx <- mvSpacers.idx[j] - 1
         potBout <- list(lengths = movement$lengths[start.idx:end.idx], values = movement$values[start.idx:end.idx]) #Time window between the two non-movement regions == potential mv bout
-        potBout.timeMv <- sum(potBout$lengths[potBout$values]) #The time spent moving in the bout
-        potBout.timeTot <- sum(potBout$lengths) #The total length of the bout, including non-movement
+        potBout.timeMv <- sum(potBout$lengths[potBout$values], na.rm = T) #The time spent moving in the bout
+        potBout.timeTot <- sum(potBout$lengths, na.rm = T) #The total length of the bout, including non-movement
         
         if(!is.null(mvFracThreshold) & !is.null(mvMinThreshold))
           pass <- potBout.timeMv/potBout.timeTot > mvFracThreshold & potBout.timeMv > mvMinThreshold*trak@hz
@@ -326,7 +327,7 @@ flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
   return(trak)
 }
 
-flies.calculateSpeed <- function(centroid, hz){
+flies.calculateSpeed <- function(centroid){
   if(ncol(centroid) %% 2 != 0)
     stop('centroid matrix has uneven number of columns. It should contain xy coordinates in separate columns')
   
@@ -337,8 +338,6 @@ flies.calculateSpeed <- function(centroid, hz){
     speed[,j] <- sqrt(rowSums( diff(centroid[, i:(i+1)])^2 ))
     j <- j+1
   }
-  #Discard the first few frames and rescale speed to units of pixel/s 
-  speed <- speed[3:nrow(speed), ]*hz
   return(speed) 
 }
 
