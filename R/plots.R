@@ -291,18 +291,22 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
   sleepActivity <- trak@activity$result
   hz = trak@hz
   
-  if(timeScale == "h"){
+  if(timeScale %in% c('h', 'hour')){
     plotFactor = hz*60^2
-  }else if(timeScale == "m"){
+  }else if(timeScale %in% c('m', 'min', 'minute')){
     plotFactor = hz*60
-  }else if(timeScale == "frames"){
+  }else if(timeScale == 'frames'){
     plotFactor = 1
-  }else{
+  }else if(timeScale %in% c('s', 'sec')){
     plotFactor = hz
   }
+  else
+    stop(paste('Did not recognize timeScale:', timeScale))
+  
   start <- start*plotFactor
   end <- end*plotFactor
   s <- 1:nrow(speed)/plotFactor
+  ymax <- max(as.data.frame(speed)[start:end, flyNumber], na.rm = T)
   if(returnData)
     out <- data.frame(time = s[start:end], speed = as.data.frame(speed)[start:end, flyNumber])
   
@@ -316,9 +320,9 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
       plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
-    rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
+    rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = ymax, col = rgb(120,220,220, maxColorValue = 255, alpha = 150))
     #Movement
-    rect(xleft = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
+    rect(xleft = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths/plotFactor, ytop = ymax, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
     for(i in 1:length( sleepActivity[[flyNumber]]$mvBouts.startTimes )){
       start <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i]/plotFactor
       end <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths[i]/plotFactor
@@ -334,7 +338,7 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
     else
       plot(s[start:end], speed[[flyNumber]][start:end], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     
-    rect(xleft = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths/plotFactor, ytop = 35, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
+    rect(xleft = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor, ybottom = 0, xright = sleepActivity[[flyNumber]]$mvBouts.startTimes/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths/plotFactor, ytop = ymax, col = rgb(220,220,220, maxColorValue = 255, alpha = 100))
     for(i in 1:length( sleepActivity[[flyNumber]]$mvBouts.startTimes )){
       start <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i]/plotFactor
       end <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i]/plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths[i]/plotFactor
@@ -349,7 +353,7 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
       plot(s[start:end], as.data.frame(speed)[start:end, flyNumber], type = 'l', xlab = timeScale, ylab = 'Speed', ...)
     sleepStart <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor)
     sleepEnd <- sleepActivity[[flyNumber]]$sleepStartTimes/(plotFactor) + sleepActivity[[flyNumber]]$sleepLengths/(plotFactor)
-    rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = 35, col = rgb(120,220,220, maxColorValue = 255, alpha = 100))
+    rect(xleft = sleepStart, ybottom = 0, xright = sleepEnd, ytop = ymax, col = rgb(120,220,220, maxColorValue = 255, alpha = 100))
   }
   if(returnData)
     return(out)
