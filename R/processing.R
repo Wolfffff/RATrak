@@ -6,7 +6,7 @@
 #
 
 
-flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvFracThreshold = .7, mvMinThreshold = 5, mvSpacerThreshold = 3, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5){
+flies.activity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^2, mvFracThreshold = .7, mvMinThreshold = 5, mvSpacerThreshold = 3, emptyWellThreshold = 5, errorThreshold = 3*60^2, erroneousSleepDataThreshold = 5, speedUnit = 'dist/s'){
   #sleepThreshold = time of no movement to call sleep (s). Default 5 min
   #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
   #mvFracThreshold = threshold to call bout of movement. The fly needs to spend at least this fraction of time moving 
@@ -15,12 +15,21 @@ flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.
   #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
   #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
   #erroneous(Sleep/Movement)DataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
-  sleepMin <- sleepThreshold*trak@hz
-  deadMin <- deathThreshold*trak@hz
-  mvSpaceMin <- mvSpacerThreshold*trak@hz
-  errorMin <- errorThreshold*trak@hz
+  if(speedUnit == 'dist/s'){
+    sleepMin <- sleepThreshold
+    deadMin <- deathThreshold
+    mvSpaceMin <- mvSpacerThreshold
+    errorMin <- errorThreshold
+  }
+  else if(speedUnit == 'dist/frame'){
+    sleepMin <- sleepThreshold*trak@hz
+    deadMin <- deathThreshold*trak@hz
+    mvSpaceMin <- mvSpacerThreshold*trak@hz
+    errorMin <- errorThreshold*trak@hz
+  }
+  else
+    stop(paste('speedUnit:', speedUnit, 'was not recognized. speedUnit should be: dist/s or dist/frame'))
   
-    
   #Naming
   speed <- trak@speed
   
@@ -190,7 +199,8 @@ flies.sleepActivity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.
   trak@activity <- list(result = result, parameters = list(sleepThreshold = sleepThreshold, deathThreshold = deathThreshold, 
                                                            mvFracThreshold = mvFracThreshold, mvMinThreshold = mvMinThreshold, 
                                                            mvSpacerThreshold = mvSpacerThreshold, emptyWellThreshold = emptyWellThreshold, 
-                                                           errorThreshold = errorThreshold, erroneousSleepDataThreshold = erroneousSleepDataThreshold))
+                                                           errorThreshold = errorThreshold, erroneousSleepDataThreshold = erroneousSleepDataThreshold,
+                                                           speedUnit = speedUnit))
   return(trak)
 }
 

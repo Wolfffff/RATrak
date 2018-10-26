@@ -59,7 +59,7 @@ readInfo <- function(speedBinFileName = NULL, centroidBinFileName = NULL, timeBi
   else if(!is.null(centroidBinFileName) & is.null(timeBinFileName) & is.null(speedBinFileName)){
     print('Only centroid data provided. Calculating speed')
     centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid')
-    speed <- flies.calculateSpeed(as.matrix(centroid))
+    speed <- flies.calculateSpeed(as.matrix(centroid))*5 #Rescale speed to pixel/s
     
     centroid <- centroid[2:nrow(centroid), ] #Align speed and centroid data
   }
@@ -100,7 +100,7 @@ readBinary <- function(fileName, colCount, dataType){
     return(time)
   }
   else
-    stop(paste('datatype:', dataType, 'is not recognized. dataType should be: speed, centroid, or time'))
+    stop(paste('datatype:', dataType, 'was not recognized. dataType should be: speed, centroid, or time'))
 }
 
 readMetadata <- function(fileName, start = 1, end){
