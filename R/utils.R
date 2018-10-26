@@ -17,27 +17,57 @@ lmp <- function (modelobject) {
   return(p)
 }
 
-.trak <- setClass(Class = "trak", slots = c(speed = "data.frame", centroid = "data.frame", activity = "list", metadata = "data.frame", hz = "numeric"), package = 'RATrak')
+.trak <- setClass(Class = "trak", slots = c(speed = "data.frame", speed.regressed = "data.frame", time = 'numeric', centroid = "data.frame",  activity = "list", metadata = "data.frame", hz = "numeric"), package = 'RATrak')
 
-readInfo <- function(speedBinFileName = NULL, centroidBinFileName = NULL, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5, inferPhenos = T){
-  if(is.null(centroidBinFileName) & !is.null(speedBinFileName)){
-    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')/hz
-    centroid <- data.frame()
+readInfo <- function(speedBinFileName = NULL, centroidBinFileName = NULL, timeBinFileName = NULL, metadataFileName, wellCount, start = 1, end = wellCount, hz = 5, inferPhenos = T){
+  time <- numeric()
+  centroid <- data.frame()
+  speed <- data.frame()
+  
+  if(!is.null(centroidBinFileName) & !is.null(timeBinFileName) & !is.null(speedBinFileName)){  
+    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
+    centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid')
+    time <- readBinary(timeBinFileName, dataType = 'time')
+    
+    centroid <- centroid[2:nrow(centroid), ] #Align speed and centroid data
   }
-  else if(!is.null(centroidBinFileName) & !is.null(speedBinFileName)){  
-    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')/hz
-    centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid') 
+  else if(is.null(centroidBinFileName) & !is.null(timeBinFileName) & !is.null(speedBinFileName)){  
+    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
+    time <- readBinary(timeBinFileName, dataType = 'time')
   }
-  else if(!is.null(centroidBinFileName) & is.null(speedBinFileName)){
-    print('No speed data provided. Calculating speed from centroid data')
-    centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid') 
+  else if(!is.null(centroidBinFileName) & is.null(timeBinFileName) & !is.null(speedBinFileName)){  
+    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
+    centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid')
+    
+    centroid <- centroid[2:nrow(centroid), ] #Align speed and centroid data
+  }
+  else if(!is.null(centroidBinFileName) & !is.null(timeBinFileName) & is.null(speedBinFileName)){
+    print('Only centroid and time data provided. Calculating speed')
+    centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid')
+    time <- readBinary(timeBinFileName, dataType = 'time')
+    speed <- flies.calculateSpeed(as.matrix(centroid), time)
+    
+    centroid <- centroid[2:nrow(centroid), ] #Align speed and centroid data
+  }
+  else if(is.null(centroidBinFileName) & is.null(timeBinFileName) & !is.null(speedBinFileName)){  
+    speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
+  }
+  else if(is.null(centroidBinFileName) & !is.null(timeBinFileName) & is.null(speedBinFileName)){
+    warning('Only time data provided')
+    time <- readBinary(timeBinFileName, dataType = 'time')
+  }
+  else if(!is.null(centroidBinFileName) & is.null(timeBinFileName) & is.null(speedBinFileName)){
+    print('Only centroid data provided. Calculating speed')
+    centroid <- readBinary(centroidBinFileName, wellCount, dataType = 'centroid')
     speed <- flies.calculateSpeed(as.matrix(centroid))
+    
+    centroid <- centroid[2:nrow(centroid), ] #Align speed and centroid data
   }
   else
-    stop('Neither speedBinFileName or centroidBinFileName was provided')
+    stop('Neither speed, centroid, or time data was provided')
   
   metadata <- readMetadata(metadataFileName, start, end)
-  data <- .trak(speed=speed, centroid=centroid, metadata=metadata, hz=hz)
+  data <- .trak(speed=speed, centroid=centroid, metadata=metadata, time = time, hz=hz)
   if(inferPhenos)
     data <- flies.sleepActivity(data)
   return(data)
@@ -48,6 +78,8 @@ readBinary <- function(fileName, colCount, dataType){
   if(dataType == 'speed'){
     mat <- matrix(readBin(file, numeric(), n = 1e8, size = 4), ncol = colCount, byrow = TRUE)
     mat <- mat[4:nrow(mat), ] #Discard first few frames
+    close(file)
+    return(as.data.frame(mat))
   }
   else if(dataType == 'centroid'){
     mat.tmp <- matrix(readBin(file, numeric(), n = 1e8, size = 8), ncol = colCount*2, byrow = TRUE)
@@ -58,9 +90,17 @@ readBinary <- function(fileName, colCount, dataType){
     mat[, xCols] <- mat.tmp[, 1:colCount]
     mat[, yCols] <- mat.tmp[, (colCount+1):(colCount*2)]
     mat <- mat[3:nrow(mat), ] #Discard first few frames
+    close(file)
+    return(as.data.frame(mat))
   }
-  close(file)
-  return(as.data.frame(mat))
+  else if(dataType == 'time'){
+    time <- readBin(file, numeric(), n = 1e8, size = 4)
+    time <- time[4:length(time)] #Discard first few frames
+    close(file)
+    return(time)
+  }
+  else
+    stop(paste('datatype:', dataType, 'is not recognized. dataType should be: speed, centroid, or time'))
 }
 
 readMetadata <- function(fileName, start = 1, end){

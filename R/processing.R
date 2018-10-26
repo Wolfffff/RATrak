@@ -327,7 +327,7 @@ flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
   return(trak)
 }
 
-flies.calculateSpeed <- function(centroid){
+flies.calculateSpeed <- function(centroid, time = NULL){
   if(ncol(centroid) %% 2 != 0)
     stop('centroid matrix has uneven number of columns. It should contain xy coordinates in separate columns')
   
@@ -338,6 +338,51 @@ flies.calculateSpeed <- function(centroid){
     speed[,j] <- sqrt(rowSums( diff(centroid[, i:(i+1)])^2 ))
     j <- j+1
   }
-  return(speed) 
+  
+  if(is.null(time))
+    warning('No time data provided. Returning speed as pixel/frame. This will result in inconsistent estimates if the time between frames are not identical')
+  else
+    speed <- speed/time
+  return(speed)
 }
+
+flies.regressSpeed <- function(trak, center = c(664, 524)){
+  #This function fits the linear model: speed ~ distance from center of image. The residual speed is added to the trak object
+  
+  #center = The camera center coordinates. The default (664, 524) correspond to a camera mode with resolution 1048 x 1328. 
+  #If tracking was done using a different camera mode, this has to be changed accordingly
+  if(nrow(trak@speed) > 50000)
+    smpl <- sort(sample(x = 1:nrow(trak@speed), size = 50000))
+  else
+    smpl <- 1:nrow(trak@speed)
+  
+  xCols <- seq(from = 1, to = ncol(trak@centroid) - 1, by = 2)
+  yCols <- seq(from = 2, to = ncol(trak@centroid), by = 2)
+  cam_dist <- sqrt((trak@centroid[smpl, xCols] - center[1])^2 + (trak@centroid[smpl, yCols] - center[2])^2)
+  
+  #Model
+  cam_dist <- as.vector(cam_dist)
+  speed <- as.vector(as.matrix(trak@speed[smpl,]))
+  filter <- !is.na(speed) & speed != 0
+  model <- lm(speed[filter] ~ cam_dist[filter])
+  
+  if(summary(model)$coefficients[2, 4] < .01){
+    cam_dist <- sqrt((trak@centroid[, xCols] - center[1])^2 + (trak@centroid[, yCols] - center[2])^2)
+    cam_dist <- as.vector(cam_dist)
+    speed <- as.vector(as.matrix(trak@speed))
+    
+    #Regress out the "distance from camera" effect. I'm not using the intercept, since I don't want to center the speed around zero
+    speed.regressed <- speed
+    speed.regressed[filter] <- speed[filter] - model$coefficients[2]*cam_dist[filter]
+    speed.regressed <- as.data.frame(matrix(speed.regressed, ncol = ncol(trak@speed))) #Reshape
+  }
+  else{
+    cat('No significant \"distance from center\" effect detected')
+    speed.regressed <- data.frame()
+  }
+  
+  trak@speed.regressed <- speed.regressed
+  return(trak)
+}
+
 
