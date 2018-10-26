@@ -15,23 +15,23 @@ flies.activity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^
   #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
   #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
   #erroneous(Sleep/Movement)DataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
-  if(speedUnit == 'dist/s'){
-    sleepMin <- sleepThreshold
-    deadMin <- deathThreshold
-    mvSpaceMin <- mvSpacerThreshold
-    errorMin <- errorThreshold
+  sleepMin <- sleepThreshold*trak@hz
+  deadMin <- deathThreshold*trak@hz
+  mvSpaceMin <- mvSpacerThreshold*trak@hz
+  errorMin <- errorThreshold*trak@hz
+  
+  if(nrow(trak@speed.regressed) > 0){
+    print('Using regressed speed')
+    speedType <- 'Regressed'
+    speed <- trak@speed.regressed
   }
-  else if(speedUnit == 'dist/frame'){
-    sleepMin <- sleepThreshold*trak@hz
-    deadMin <- deathThreshold*trak@hz
-    mvSpaceMin <- mvSpacerThreshold*trak@hz
-    errorMin <- errorThreshold*trak@hz
+  else if(nrow(trak@speed) > 0){
+    print('Using raw speed')
+    speedType <- 'Raw'
+    speed <- trak@speed
   }
   else
-    stop(paste('speedUnit:', speedUnit, 'was not recognized. speedUnit should be: dist/s or dist/frame'))
-  
-  #Naming
-  speed <- trak@speed
+    stop('trak object does not contain speed data')
   
   #Run length encoding of movement > 0, == streaks of movement
   speed.mov <- apply(speed, MARGIN = 2, FUN = function(x){rle(x > 0)})
@@ -200,7 +200,7 @@ flies.activity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^
                                                            mvFracThreshold = mvFracThreshold, mvMinThreshold = mvMinThreshold, 
                                                            mvSpacerThreshold = mvSpacerThreshold, emptyWellThreshold = emptyWellThreshold, 
                                                            errorThreshold = errorThreshold, erroneousSleepDataThreshold = erroneousSleepDataThreshold,
-                                                           speedUnit = speedUnit))
+                                                           speedType = speedType))
   return(trak)
 }
 

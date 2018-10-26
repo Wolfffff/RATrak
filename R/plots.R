@@ -292,11 +292,13 @@ plot.highlightBouts <- function(trak, flyNumber = 1, start = 1, end = 5, timeSca
   hz = trak@hz
   
   if(timeScale %in% c('h', 'hour')){
-    plotFactor = 60^2
+    plotFactor = hz*60^2
   }else if(timeScale %in% c('m', 'min', 'minute')){
-    plotFactor = 60
-  }else if(timeScale %in% c('s', 'sec')){
+    plotFactor = hz*60
+  }else if(timeScale == 'frames'){
     plotFactor = 1
+  }else if(timeScale %in% c('s', 'sec')){
+    plotFactor = hz
   }
   else
     stop(paste('Did not recognize timeScale:', timeScale))
