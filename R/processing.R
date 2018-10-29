@@ -289,7 +289,7 @@ flies.avgByGroup <- function(trak, sex = T, treatments = T) {
 }
 
 
-flies.extractActivity <- function(trak, start, end, timeScale, returnRawData = F){
+flies.extractTimeWindow <- function(trak, start, end, timeScale, returnRawData = F){
   #Convenience function to extract activity phenotypes within a time window from a trak object
   if(timeScale %in% c('h', 'hour')){
     timeFactor = trak@hz*60^2
@@ -405,6 +405,33 @@ flies.regressSpeed <- function(trak, center = c(664, 524)){
   
   trak@speed.regressed <- speed.regressed
   return(trak)
+}
+
+flies.extractActivity <- function(trak){
+  #Convenience function to extract averaged phenotypes per fly in data.frame format
+  avgMvLength <- sapply(trak@activity$result, function(x){mean(x$mvBouts.lengths, na.rm = T)})
+  avgMvFrac <- sapply(trak@activity$result, function(x){mean(x$mvBouts.mvTime/x$mvBouts.lengths, na.rm = T)})
+  avgSpeed <- sapply(trak@activity$result, function(x){mean(x$mvBouts.avgSpeed, na.rm = T)})
+  mvNr <- sapply(trak@activity$result, function(x){x$mvBouts.nr})
+  sleepNr <- sapply(trak@activity$result, function(x){x$sleepNr})
+  avgSleepLength <- sapply(trak@activity$result, function(x){mean(x$sleepLengths, na.rm = T)})
+  totSleep <- sapply(trak@activity$result, function(x){sum(x$sleepLengths, na.rm = T)})
+  
+  if(identical(nrow(trak@metadata), length(avgMvLength), length(avgMvFrac), length(avgSpeed), length(mvNr), length(sleepNr), length(avgSleepLength), length(totSleep))){
+    out <- data.frame(avgMvLength = avgMvLength, avgMvFrac = avgMvFrac, avgSpeed = avgSpeed, 
+                      mvNr = mvNr, sleepNr = sleepNr, avgSleepLength = avgSleepLength, totSleep = totSleep,
+                      trak@metadata)
+    return(out)
+  }
+  else if(identical(length(avgMvLength), length(avgMvFrac), length(avgSpeed), length(mvNr), length(sleepNr), length(avgSleepLength), length(totSleep))){
+    warning(paste('Found activity data for', length(avgMvLength), 'samples but meta data contains', nrow(trak@metadata), 'samples. Returning data.frame without meta data'))
+    out <- data.frame(avgMvLength = avgMvLength, avgMvFrac = avgMvFrac, avgSpeed = avgSpeed, 
+                      mvNr = mvNr, sleepNr = sleepNr, avgSleepLength = avgSleepLength, totSleep = totSleep)
+    return(out)
+  }
+  else{
+    stop('Inconsistent number of samples in activity data')
+  }
 }
 
 
