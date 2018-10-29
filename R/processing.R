@@ -289,15 +289,20 @@ flies.avgByGroup <- function(trak, sex = T, treatments = T) {
 }
 
 
-flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
+flies.extractActivity <- function(trak, start, end, timeScale, returnRawData = F){
   #Convenience function to extract activity phenotypes within a time window from a trak object
-  if(timeScale == "h"){
+  if(timeScale %in% c('h', 'hour')){
     timeFactor = trak@hz*60^2
-  }else if(timeScale == "m"){
+  }else if(timeScale %in% c('m', 'min', 'minute')){
     timeFactor = trak@hz*60
-  }else{
+  }else if(timeScale == 'frames'){
+    timeFactor = 1
+  }else if(timeScale %in% c('s', 'sec')){
     timeFactor = trak@hz
   }
+  else
+    stop(paste('Did not recognize timeScale:', timeScale))
+  
   start <- start*timeFactor
   if(end == 'end')
     end <- nrow(trak@speed) + 1
@@ -305,35 +310,42 @@ flies.extractActivity <- function(trak, start, end, timeScale, returnSpeed = F){
     end <- end*timeFactor
   
   activity.window <- list()
-  for(i in 1:length(trak@activity)){
-    if(length(trak@activity[[i]]$sleepStartTimes) != length(trak@activity[[i]]$sleepLengths))
+  for(i in 1:length(trak@activity$result)){
+    if(length(trak@activity$result[[i]]$sleepStartTimes) != length(trak@activity$result[[i]]$sleepLengths))
       stop(paste('Inconsistent sleep data for individual ', i, '. length(sleepStartTimes) != length(sleepLengths)', sep = ''))
-    mvBoutNrs <- c(length(trak@activity[[i]]$mvStartTimes), length(trak@activity[[i]]$mvLengths), length(trak@activity[[i]]$boutSpeeds))
+    mvBoutNrs <- c(length(trak@activity$result[[i]]$mvBouts.startTimes), length(trak@activity$result[[i]]$mvBouts.lengths), length(trak@activity$result[[i]]$mvBouts.avgSpeed))
     if(length(unique(mvBoutNrs)) != 1)
-      stop(paste('Inconsistent movement data for individual ', i, '. length(mvStartTimes), length(mvLengths), and length(boutSpeeds) differ', sep = ''))
+      stop(paste('Inconsistent movement data for individual ', i, '. length(mvBouts.startTimes), length(mvBouts.lengths), and length(mvBouts.avgSpeed) differ', sep = ''))
     
-    sleepInWindow <- trak@activity[[i]]$sleepStartTimes > start & trak@activity[[i]]$sleepStartTimes <= end
-    mvInWindow <- trak@activity[[i]]$mvStartTimes > start & trak@activity[[i]]$mvStartTimes <= end
-    if(!is.na(trak@activity[[i]]$dead) & (trak@activity[[i]]$dead > start & trak@activity[[i]]$dead <= end))
-      dead <- trak@activity[[i]]$dead
+    sleepInWindow <- trak@activity$result[[i]]$sleepStartTimes > start & trak@activity$result[[i]]$sleepStartTimes <= end
+    mvInWindow <- trak@activity$result[[i]]$mvBouts.startTimes > start & trak@activity$result[[i]]$mvBouts.startTimes <= end
+    if(!is.na(trak@activity$result[[i]]$dead) & (trak@activity$result[[i]]$dead > start & trak@activity$result[[i]]$dead <= end))
+      dead <- trak@activity$result[[i]]$dead
     else
       dead <- NA
     
     
-    activity.window[[i]] <- list(sleepLengths = trak@activity[[i]]$sleepLengths[sleepInWindow], 
+    activity.window[[i]] <- list(sleepLengths = trak@activity$result[[i]]$sleepLengths[sleepInWindow], 
                                  sleepNr = sum(sleepInWindow), 
-                                 sleepStartTimes = trak@activity[[i]]$sleepStartTimes[sleepInWindow],
-                                 mvLengths = trak@activity[[i]]$mvLengths[mvInWindow], 
-                                 mvNr = sum(mvInWindow), 
-                                 mvStartTimes = trak@activity[[i]]$mvStartTimes[mvInWindow], 
-                                 dead = dead, 
-                                 boutSpeeds = trak@activity[[i]]$boutSpeeds[mvInWindow])
+                                 sleepStartTimes = trak@activity$result[[i]]$sleepStartTimes[sleepInWindow],
+                                 mvBouts.lengths = trak@activity$result[[i]]$mvBouts.lengths[mvInWindow], 
+                                 mvBouts.mvTime = trak@activity$result[[i]]$mvBouts.mvTime[mvInWindow], 
+                                 mvBouts.nr = sum(mvInWindow), 
+                                 mvBouts.startTimes = trak@activity$result[[i]]$mvBouts.startTimes[mvInWindow], 
+                                 mvBouts.avgSpeed = trak@activity$result[[i]]$mvBouts.avgSpeed[mvInWindow],
+                                 dead = dead)
   }
-  trak@activity <- activity.window
-  if(!returnSpeed)
+  trak@activity$result <- activity.window
+  if(!returnRawData){
     trak@speed <- data.frame()
-  else
+    trak@speed.regressed <- data.frame()
+    trak@centroid <- data.frame()
+  }
+  else{
     trak@speed <- trak@speed[start:end, ]
+    trak@speed.regressed <- trak@speed.regressed[start:end, ]
+    trak@centroid <- trak@centroid[start:end, ]
+  }
   return(trak)
 }
 
