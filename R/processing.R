@@ -37,6 +37,7 @@ flies.activity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^
   speed.mov <- apply(speed, MARGIN = 2, FUN = function(x){rle(x > 0)})
   
   result <- list()
+  pb <- txtProgressBar(min=0, max=length(speed.mov), style=3)
   for(i in 1:length(speed.mov)){
     movement <- speed.mov[[i]]
     
@@ -195,7 +196,9 @@ flies.activity <- function(trak, sleepThreshold = 5*60, deathThreshold = 1.5*60^
     result[[i]] <- list(sleepLengths = sleepLengths, sleepNr = sleepNr, sleepStartTimes = sleepStartTimes,
                         mvBouts.lengths = mvBouts.lengths, mvBouts.mvTime = mvBouts.mvTime, mvBouts.nr = mvBouts.nr, 
                         mvBouts.startTimes = mvBouts.startTimes, mvBouts.avgSpeed = mvBouts.avgSpeed, dead = dead)
+    setTxtProgressBar(pb, i)
   }
+  close(pb)
   trak@activity <- list(result = result, parameters = list(sleepThreshold = sleepThreshold, deathThreshold = deathThreshold, 
                                                            mvFracThreshold = mvFracThreshold, mvMinThreshold = mvMinThreshold, 
                                                            mvSpacerThreshold = mvSpacerThreshold, emptyWellThreshold = emptyWellThreshold, 
@@ -378,13 +381,13 @@ flies.calculateSpeed <- function(centroid, time = NULL){
   return(speed)
 }
 
-flies.regressSpeed <- function(trak, center = c(664, 524)){
+flies.regressSpeed <- function(trak, center = c(664, 524), subset = NA){
   #This function fits the linear model: speed ~ distance from center of image. The residual speed is added to the trak object
   
   #center = The camera center coordinates. The default (664, 524) correspond to a camera mode with resolution 1048 x 1328. 
   #If tracking was done using a different camera mode, this has to be changed accordingly
-  if(nrow(trak@speed) > 50000)
-    smpl <- sort(sample(x = 1:nrow(trak@speed), size = 50000))
+  if(!is.na(subset) & nrow(trak@speed) > subset)
+    smpl <- sort(sample(x = 1:nrow(trak@speed), size = subset))
   else
     smpl <- 1:nrow(trak@speed)
   
