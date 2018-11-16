@@ -352,12 +352,12 @@ flies.extractTimeWindow <- function(trak, start, end, timeScale, returnRawData =
     if(nrow(trak@centroid) > 0){
       cols <- c(2*removeSamples - 1, 2*removeSamples) #The columns in trak@centroid corresponding to removeSamples
       trak@centroid <- trak@centroid[start:end, !(1:ncol(trak@centroid) %in% cols)]
+    }
   }
   else{
     trak@speed <- data.frame()
     trak@speed.regressed <- data.frame()
     trak@centroid <- data.frame()
-    }
   }
   return(trak)
 }
