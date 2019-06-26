@@ -97,7 +97,7 @@ plot.flyMv_allFigs <- function(trak,
   png(filename = file,
       width = 1200,
       height = 800)
-  plot.flyMv_cumMv(trak, treatmentLevels = treatmentLevels)
+  plot.flyMv_cumMv(trak,time=time, treatmentLevels = treatmentLevels)
   dev.off()
   
   #Survival
@@ -122,7 +122,7 @@ plot.flyMv_allFigs <- function(trak,
   dev.off()
   
   #Average movement per window
-  if (!avgMv) {
+  if (avgMv) {
     file <- paste(fileBaseName, '_avgMvPerWindow.png', sep = '')
     png(filename = file,
         width = 1200,
@@ -827,7 +827,7 @@ plot.flyMv_survival <-
         ylab = '',
         lwd = 3,
         ylim = c(0, 1),
-        col = cols.palette[1],
+        col = cols.palette[1]
       )
       for (i in 2:length(survival))
         points(
@@ -861,9 +861,6 @@ plot.flyMv_survival <-
           lwd = 3,
           title = legend.title
         )
-      else{
-        legend()
-      }
     }
     else{
       print("No deaths found.")
