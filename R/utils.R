@@ -9,8 +9,6 @@
 #
 
 
-# lmp ---------------------------------------------------------------------
-
 lmp <- function (modelobject) {
   if (class(modelobject) != "lm")
     stop("Not an object of class 'lm' ")
@@ -20,8 +18,6 @@ lmp <- function (modelobject) {
   return(p)
 }
 
-
-# trak definition ---------------------------------------------------------
 
 .trak <-
   setClass(
@@ -46,8 +42,6 @@ lmp <- function (modelobject) {
     ),
     package = 'RATrak'
   )
-
-# readInfo ----------------------------------------------------------------
 
 readInfo <-
   function(speedBinFileName = NULL,
@@ -157,8 +151,6 @@ readInfo <-
 
 
 
-# checkIfFile -------------------------------------------------------------
-
 checkIfFile = function(name, base) {
   fileLoc = paste0(base, name)
   if (file_test("-f", paste0(base, name))) {
@@ -168,7 +160,6 @@ checkIfFile = function(name, base) {
     return(NULL)
   }
 }
-# readInfo.margo ----------------------------------------------------------
 # ReadInfo setup for importing margo folderData
 # https://www.biorxiv.org/content/10.1101/593046v1
 
@@ -228,9 +219,6 @@ readInfo.margo <-
   }
 
 
-# readBinary --------------------------------------------------------------
-
-
 readBinary <-
   function(fileName,
            colCount,
@@ -288,9 +276,6 @@ readBinary <-
                  'was not recognized.'))
   }
 
-
-
-# readBinary.margo --------------------------------------------------------
 
 #WARNING: The precision for the centroid data has been changed between single and double in different autotracker versions.
 
@@ -361,7 +346,6 @@ readBinary.margo <-
     }
   }
 
-# readMetadata ------------------------------------------------------------
 
 readMetadata <- function(fileName, start = 1, end) {
   #Determine field separator
