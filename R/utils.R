@@ -75,13 +75,14 @@ readInfo <- function(speedBinFileName = NULL, centroidBinFileName = NULL, timeBi
   return(data)
 }
 
-readBinary <- function(fileName, colCount, dataType, size.centroid = NA_integer_, size.speed_time = 4){
+readBinary <- function(fileName, colCount, dataType, size.centroid = NA_integer_, size.speed_time = 4, startFrame=1){
   #WARNING: The precision for the centroid data has been changed between single and double in different autotracker versions. 
   file <- file(fileName, "rb")
   if(dataType == 'speed'){
     mat <- matrix(readBin(file, numeric(), n = 1e9, size = size.speed_time), ncol = colCount, byrow = TRUE)
-    mat <- mat[4:nrow(mat), ] #Discard first few frames
+    mat <- mat[startFrame:nrow(mat), ] #Discard first few frames if needed
     close(file)
+    mat[is.nan(mat)] = 0
     return(as.data.frame(mat))
   }
   else if(dataType == 'centroid'){
@@ -92,13 +93,14 @@ readBinary <- function(fileName, colCount, dataType, size.centroid = NA_integer_
     yCols <- seq(from = 2, to = ncol(mat.tmp), by = 2)
     mat[, xCols] <- mat.tmp[, 1:colCount]
     mat[, yCols] <- mat.tmp[, (colCount+1):(colCount*2)]
-    mat <- mat[3:nrow(mat), ] #Discard first few frames
+    mat <- mat[startFrame:nrow(mat), ] #Discard first few frames
     close(file)
+    mat[is.nan(mat)] = 0
     return(as.data.frame(mat))
   }
   else if(dataType == 'time'){
     time <- readBin(file, numeric(), n = 1e9, size = size.speed_time)
-    time <- time[4:length(time)] #Discard first few frames
+    time <- time[startFrame:length(time)] #Discard first few frames
     close(file)
     return(time)
   }
