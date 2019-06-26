@@ -9,6 +9,8 @@
 #
 
 
+# lmp ---------------------------------------------------------------------
+
 lmp <- function (modelobject) {
   if (class(modelobject) != "lm")
     stop("Not an object of class 'lm' ")
@@ -18,20 +20,34 @@ lmp <- function (modelobject) {
   return(p)
 }
 
+
+# trak definition ---------------------------------------------------------
+
 .trak <-
   setClass(
     Class = "trak",
     slots = c(
+      area = "data.frame",
+      centroid = "data.frame",
+      direction = "data.frame",
+      dropped = "data.frame",
+      majorAxisLength = "data.frame",
+      minorAxisLength = "data.frame",
+      orientation = "data.frame",
+      radius = "data.frame",
       speed = "data.frame",
       speed.regressed = "data.frame",
+      theta = "data.frame",
       time = 'numeric',
-      centroid = "data.frame",
+      weightedCentroid = "data.frame",
       activity = "list",
       metadata = "data.frame",
       hz = "numeric"
     ),
     package = 'RATrak'
   )
+
+# readInfo ----------------------------------------------------------------
 
 readInfo <-
   function(speedBinFileName = NULL,
@@ -61,15 +77,17 @@ readInfo <-
       time <- readBinary(timeBinFileName, dataType = 'time')
       
       centroid <-
-        centroid[2:nrow(centroid),] #Align speed and centroid data
+        centroid[2:nrow(centroid), ] #Align speed and centroid data
     }
     else if (is.null(centroidBinFileName) &
-             !is.null(timeBinFileName) & !is.null(speedBinFileName)) {
+             !is.null(timeBinFileName) &
+             !is.null(speedBinFileName)) {
       speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
       time <- readBinary(timeBinFileName, dataType = 'time')
     }
     else if (!is.null(centroidBinFileName) &
-             is.null(timeBinFileName) & !is.null(speedBinFileName)) {
+             is.null(timeBinFileName) &
+             !is.null(speedBinFileName)) {
       speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
       centroid <-
         readBinary(centroidBinFileName,
@@ -78,10 +96,11 @@ readInfo <-
                    size.centroid = size.centroid)
       
       centroid <-
-        centroid[2:nrow(centroid),] #Align speed and centroid data
+        centroid[2:nrow(centroid), ] #Align speed and centroid data
     }
     else if (!is.null(centroidBinFileName) &
-             !is.null(timeBinFileName) & is.null(speedBinFileName)) {
+             !is.null(timeBinFileName) &
+             is.null(speedBinFileName)) {
       print('Only centroid and time data provided. Calculating speed')
       centroid <-
         readBinary(centroidBinFileName,
@@ -92,14 +111,16 @@ readInfo <-
       speed <- flies.calculateSpeed(as.matrix(centroid), time)
       
       centroid <-
-        centroid[2:nrow(centroid),] #Align speed and centroid data
+        centroid[2:nrow(centroid), ] #Align speed and centroid data
     }
     else if (is.null(centroidBinFileName) &
-             is.null(timeBinFileName) & !is.null(speedBinFileName)) {
+             is.null(timeBinFileName) &
+             !is.null(speedBinFileName)) {
       speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
     }
     else if (is.null(centroidBinFileName) &
-             !is.null(timeBinFileName) & is.null(speedBinFileName)) {
+             !is.null(timeBinFileName) &
+             is.null(speedBinFileName)) {
       warning('Only time data provided')
       time <- readBinary(timeBinFileName, dataType = 'time')
     }
@@ -115,7 +136,7 @@ readInfo <-
         flies.calculateSpeed(as.matrix(centroid)) * 5 #Rescale speed to pixel/s
       
       centroid <-
-        centroid[2:nrow(centroid),] #Align speed and centroid data
+        centroid[2:nrow(centroid), ] #Align speed and centroid data
     }
     else
       stop('Neither speed, centroid, or time data was provided')
@@ -130,18 +151,93 @@ readInfo <-
         hz = hz
       )
     if (inferPhenos)
-      data <- flies.sleepActivity(data)
+      data <- flies.activity(data)
     return(data)
   }
+
+
+
+# checkIfFile -------------------------------------------------------------
+
+checkIfFile = function(name, base) {
+  fileLoc = paste0(base, name)
+  if (file_test("-f", paste0(base, name))) {
+    return(fileLoc)
+  }
+  else{
+    return(NULL)
+  }
+}
+# readInfo.margo ----------------------------------------------------------
+# ReadInfo setup for importing margo folderData
+# https://www.biorxiv.org/content/10.1101/593046v1
+
+
+
+readInfo.margo <-
+  function(rawDataFolder,
+           metadataFileName = NULL,
+           wellCount,
+           start = 1,
+           end = wellCount,
+           hz = 5,
+           startFrame = 4,
+           inferPhenos = F,
+           size.centroid = NA_integer_) {
+    #WARNING: The precision for the centroid data is not consistent across autotracker versions
+    #If the centroid coordinates make no sense, try changing size.centroid
+    #This is passed on as the size argument to readBin()
+    
+    files = list.files(rawDataFolder)
+    
+    for (name in files) {
+      assignmentName = tolower(strsplit(name, "[_.]")[[1]][3])
+      assign(
+        assignmentName,
+        readBinary.margo(
+          paste0(rawDataFolder, name),
+          dataType = assignmentName,
+          colCount = wellCount
+        )
+      )
+    }
+    
+    metadata <- readMetadata(metadataFileName, start, end)
+    
+    data <-
+      .trak(
+        area = area,
+        centroid = centroid,
+        direction = direction,
+        dropped = dropped,
+        majorAxisLength = majoraxislength,
+        minorAxisLength = minoraxislength,
+        orientation = orientation,
+        radius = radius,
+        speed = speed,
+        speed.regressed = data.frame(),
+        theta = theta,
+        time = time,
+        weightedCentroid = weightedcentroid,
+        metadata = metadata,
+        hz = hz
+      )
+    if (inferPhenos)
+      data <- flies.activity(data)
+    return(data)
+  }
+
+
+# readBinary --------------------------------------------------------------
+
 
 readBinary <-
   function(fileName,
            colCount,
            dataType,
-           size.centroid = NA_integer_,
+           size.centroid = 4,
            size.speed_time = 4,
-           startFrame = 1) {
-    #WARNING: The precision for the centroid data has been changed between single and double in different autotracker versions.
+           startFrame = 2) {
     file <- file(fileName, "rb")
     if (dataType == 'speed') {
       mat <-
@@ -151,7 +247,7 @@ readBinary <-
           byrow = TRUE
         )
       mat <-
-        mat[startFrame:nrow(mat),] #Discard first few frames if needed
+        mat[startFrame:nrow(mat), ] #Discard first few frames if needed
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -173,26 +269,99 @@ readBinary <-
                    by = 2)
       mat[, xCols] <- mat.tmp[, 1:colCount]
       mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
-      mat <- mat[startFrame:nrow(mat),] #Discard first few frames
+      mat <-
+        mat[startFrame:nrow(mat), ] #Shift to correct for margo output
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
     }
     else if (dataType == 'time') {
       time <- readBin(file, numeric(), n = 1e9, size = size.speed_time)
-      time <- time[startFrame:length(time)] #Discard first few frames
+      time <-
+        time[startFrame:length(time)]
       close(file)
       return(time)
     }
     else
-      stop(
-        paste(
-          'datatype:',
-          dataType,
-          'was not recognized. dataType should be: speed, centroid, or time'
-        )
-      )
+      stop(paste('datatype:',
+                 dataType,
+                 'was not recognized.'))
   }
+
+
+
+# readBinary.margo --------------------------------------------------------
+
+#WARNING: The precision for the centroid data has been changed between single and double in different autotracker versions.
+
+readBinary.margo <-
+  function(fileName,
+           colCount,
+           dataType = NULL,
+           size.centroid = 4,
+           size.default = 4,
+           startFrame = 1) {
+    file <- file(fileName, "rb")
+    
+    if (dataType == 'centroid' || dataType == "weightedCentroid") {
+      mat.tmp <-
+        matrix(
+          readBin(file, numeric(), n = 1e9, size = size.centroid),
+          ncol = colCount * 2,
+          byrow = TRUE
+        )
+      #Reshape matrix
+      mat <- matrix(ncol = ncol(mat.tmp), nrow = nrow(mat.tmp))
+      xCols <- seq(from = 1,
+                   to = ncol(mat.tmp) - 1,
+                   by = 2)
+      yCols <- seq(from = 2,
+                   to = ncol(mat.tmp),
+                   by = 2)
+      mat[, xCols] <- mat.tmp[, 1:colCount]
+      mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
+      mat <-
+        mat[startFrame:nrow(mat), ] #Shift to correct for margo output
+      close(file)
+      mat[is.nan(mat)] = 0
+      return(as.data.frame(mat))
+    }
+    else if (dataType == "dropped") {
+      #Be careful of syncing here -- the rounding may cause issues
+      # Needs to be fixed
+      bits = (rawToBits(readBin(
+        file, raw(), n = 1e9, size = 1
+      )))
+      close(file)
+      mat <-
+        matrix(bits[1:(RoundTo(length(bits), colCount, trunc))], #Round to multiple of well count
+               ncol = colCount,
+               byrow = TRUE)
+      #    mat <- sapply(as.data.frame(mat), as.logical)
+      mat = mat[(startFrame):nrow(mat), ] #Discard first few frames if needed
+      return(as.data.frame(mat))
+    }
+    else if (dataType == "time") {
+      time <- readBin(file, numeric(), n = 1e9, size = size.default)
+      time <-
+        time[startFrame:length(time)]
+      close(file)
+      return(time)
+    }
+    else{
+      mat <-
+        matrix(
+          readBin(file, numeric(), n = 1e9, size = size.default),
+          ncol = colCount,
+          byrow = TRUE
+        )#Discard first few frames if needed
+      close(file)
+      mat[is.nan(mat)] = 0
+      return(as.data.frame(mat))
+    }
+  }
+
+# readMetadata ------------------------------------------------------------
 
 readMetadata <- function(fileName, start = 1, end) {
   #Determine field separator
@@ -207,7 +376,7 @@ readMetadata <- function(fileName, start = 1, end) {
     stop(paste('Could not determine field separator in', fileName))
   
   meta$Treatment <- as.vector(meta$Treatment)
-  data = meta[start:end, ]
+  data = meta[start:end,]
   return(data)
 }
 

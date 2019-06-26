@@ -33,41 +33,51 @@ plot.flyMv_mvNr <-
           mean(x$mvNr)
         }
       )
-    
+    if (!all(is.na(avgSleep[[1]]))) {
     if (is.na(treatmentLevels[1]))
       treatmentLevels <- paste('group', levels(treatments))
     
-    box <- boxplot(avgSleep, xaxt = 'n', frame = F, ...)
-    axis(
-      side = 1,
-      at = 1:nlevels(treatments),
-      labels = treatmentLevels,
-      cex.axis = 2
-    )
-    mtext(
-      side = 2,
-      text = 'Number of movement bouts',
-      cex = 2,
-      line = 2
-    )
-    
-    if (nlevels(treatments) == 2 & !is.na(test)) {
-      if (test == 'wilcox') {
-        p <- wilcox.test(avgSleep[[1]], avgSleep[[2]])$p.value
-        # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
-        legend('topleft', paste('p =', round(p, digits = 3)), title = 'Wilcoxon')
+      box <-
+        boxplot(
+          avgSleep,
+          xaxt = 'n',
+          frame = F,
+          ylim = range(avgSleep, na.rm = TRUE)
+        )
+      axis(
+        side = 1,
+        at = 1:nlevels(treatments),
+        labels = treatmentLevels,
+        cex.axis = 2
+      )
+      mtext(
+        side = 2,
+        text = 'Number of movement bouts',
+        cex = 2,
+        line = 2
+      )
+      
+      if (nlevels(treatments) == 2 & !is.na(test)) {
+        if (test == 'wilcox') {
+          p <- wilcox.test(avgSleep[[1]], avgSleep[[2]])$p.value
+          # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
+          legend('topleft', paste('p =', round(p, digits = 3)), title = 'Wilcoxon')
+        }
+        if (test == 't.test') {
+          p <- t.test(avgSleep[[1]], avgSleep[[2]])$p.value
+          # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
+          legend('topleft', paste('p =', round(p, digits = 3)), title = 't-test')
+        }
       }
-      if (test == 't.test') {
-        p <- t.test(avgSleep[[1]], avgSleep[[2]])$p.value
+      if (nlevels(treatments) > 2 & !is.na(test)) {
+        model <- lm(unlist(avgSleep) ~ as.factor(treatments))
+        p <- lmp(model)
         # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
-        legend('topleft', paste('p =', round(p, digits = 3)), title = 't-test')
+        legend('topleft', paste('p =', round(p, digits = 3)), title = 'Anova')
       }
     }
-    if (nlevels(treatments) > 2 & !is.na(test)) {
-      model <- lm(unlist(avgSleep) ~ as.factor(treatments))
-      p <- lmp(model)
-      # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
-      legend('topleft', paste('p =', round(p, digits = 3)), title = 'Anova')
+    else{
+      print("No sleep bouts available")
     }
   }
 
@@ -87,7 +97,7 @@ plot.flyMv_allFigs <- function(trak,
   png(filename = file,
       width = 1200,
       height = 800)
-  plot.flyMv_cumMv(trak, time = time, treatmentLevels = treatmentLevels)
+  plot.flyMv_cumMv(trak, treatmentLevels = treatmentLevels)
   dev.off()
   
   #Survival
@@ -106,27 +116,13 @@ plot.flyMv_allFigs <- function(trak,
   par(mfrow = c(2, 2))
   plot.flyMv_avgSleepLength(trak, treatmentLevels = treatmentLevels)
   plot.flyMv_sleepNr(trak, treatmentLevels = treatmentLevels)
-  mtext(
-    text = 'Sleep',
-    side = 3,
-    cex = 4,
-    line = .5,
-    adj = -.3
-  )
   
   plot.flyMv_avgMvLength(trak, treatmentLevels = treatmentLevels)
   plot.flyMv_mvNr(trak, treatmentLevels = treatmentLevels)
-  mtext(
-    text = 'Movement',
-    side = 3,
-    cex = 4,
-    line = .5,
-    adj = -.5
-  )
   dev.off()
   
   #Average movement per window
-  if (avgMv) {
+  if (!avgMv) {
     file <- paste(fileBaseName, '_avgMvPerWindow.png', sep = '')
     png(filename = file,
         width = 1200,
@@ -293,7 +289,7 @@ plot.flyMv_rollAvg <- function(trak,
                                treatmentLevels = NA,
                                title = NA,
                                width = 5 * 60 ^ 2,
-                               by = 5 * 60 * 30,
+                               by = 5 * 60 * 10,
                                legend.treat = 'topright',
                                legend.sex = 'top',
                                legend.treat_title = '',
@@ -304,7 +300,7 @@ plot.flyMv_rollAvg <- function(trak,
   hz <- trak@hz
   treatments <- trak@metadata$Treatment
   sex <- trak@metadata$Male
-  
+  framesPerTime = 0
   if (time == 'min') {
     framesPerTime <- hz * 60
   }
@@ -516,7 +512,8 @@ plot.highlightBouts <-
     start <- start * plotFactor
     end <- end * plotFactor
     s <- 1:nrow(speed) / plotFactor
-    ymax <- max(as.data.frame(speed)[start:end, flyNumber], na.rm = T)
+    ymax <-
+      max(as.data.frame(speed)[start:end, flyNumber], na.rm = T)
     if (returnData)
       out <-
       data.frame(time = s[start:end], speed = as.data.frame(speed)[start:end, flyNumber])
@@ -558,7 +555,8 @@ plot.highlightBouts <-
         col = rgb(220, 220, 220, maxColorValue = 255, alpha = 100)
       )
       for (i in 1:length(sleepActivity[[flyNumber]]$mvBouts.startTimes)) {
-        start <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i] / plotFactor
+        start <-
+          sleepActivity[[flyNumber]]$mvBouts.startTimes[i] / plotFactor
         end <-
           sleepActivity[[flyNumber]]$mvBouts.startTimes[i] / plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths[i] /
           plotFactor
@@ -593,7 +591,8 @@ plot.highlightBouts <-
         col = rgb(220, 220, 220, maxColorValue = 255, alpha = 100)
       )
       for (i in 1:length(sleepActivity[[flyNumber]]$mvBouts.startTimes)) {
-        start <- sleepActivity[[flyNumber]]$mvBouts.startTimes[i] / plotFactor
+        start <-
+          sleepActivity[[flyNumber]]$mvBouts.startTimes[i] / plotFactor
         end <-
           sleepActivity[[flyNumber]]$mvBouts.startTimes[i] / plotFactor + sleepActivity[[flyNumber]]$mvBouts.lengths[i] /
           plotFactor
@@ -779,9 +778,11 @@ plot.flyMv_survival <-
       #Create time x-axis
       if (is.na(experimentLength))
         #x-axis extends until last death
-        t <- seq(1, max(activity.death, na.rm = T), length.out = 100)
+        t <-
+          seq(1, max(activity.death, na.rm = T), length.out = 100)
       else
-        t <- seq(1, nrows(activity) / framesPerTime, length.out = 100)
+        t <-
+          seq(1, nrows(activity) / framesPerTime, length.out = 100)
       
       #Fraction alive
       # activity.death_treatment.surv <- sapply(t, function(x){sum(activity.death_treatment > x, na.rm = T)/length(activity.death_treatment)})
@@ -826,7 +827,7 @@ plot.flyMv_survival <-
         ylab = '',
         lwd = 3,
         ylim = c(0, 1),
-        col = cols.palette[1]
+        col = cols.palette[1],
       )
       for (i in 2:length(survival))
         points(
@@ -860,6 +861,9 @@ plot.flyMv_survival <-
           lwd = 3,
           title = legend.title
         )
+      else{
+        legend()
+      }
     }
     else{
       print("No deaths found.")

@@ -1,5 +1,5 @@
 #Processing matrix data
-#flies.sleepActivity
+#flies.activity
 #flies.avgByGroup
 #
 #
@@ -25,6 +25,7 @@ flies.activity <-
     #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
     #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
     #erroneous(Sleep/Movement)DataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
+    
     sleepMin <- sleepThreshold * trak@hz
     deadMin <- deathThreshold * trak@hz
     mvSpaceMin <- mvSpacerThreshold * trak@hz
@@ -64,7 +65,8 @@ flies.activity <-
       sleep <-
         movement$lengths > sleepMin &
         !movement$values # if streak length > sleepThreshold AND streak value == F (no movement), the fly is sleeping or dead
-      if (any(sleep) & length(movement$lengths) > emptyWellThreshold) {
+      if (any(sleep) &
+          length(movement$lengths) > emptyWellThreshold) {
         sleepIndexes <- which(sleep)
         
         
@@ -101,7 +103,8 @@ flies.activity <-
                 #Merge bouts
                 movement$lengths[sleepIndexes[s]] = sum(movement$lengths[sleepIndexes[s]:sleepIndexes[s +
                                                                                                         1]])
-                rmIndexes <- (sleepIndexes[s] + 1):sleepIndexes[s + 1]
+                rmIndexes <-
+                  (sleepIndexes[s] + 1):sleepIndexes[s + 1]
                 movement$lengths = movement$lengths[-rmIndexes]
                 movement$values = movement$values[-rmIndexes]
                 
@@ -213,7 +216,8 @@ flies.activity <-
             potBout.timeMv / potBout.timeTot > mvFracThreshold &
             potBout.timeMv > mvMinThreshold * trak@hz
           else if (!is.null(mvFracThreshold))
-            pass <- potBout.timeMv / potBout.timeTot > mvFracThreshold
+            pass <-
+            potBout.timeMv / potBout.timeTot > mvFracThreshold
           else if (!is.null(mvMinThreshold))
             pass <- potBout.timeMv > mvMinThreshold * trak@hz
           else
@@ -243,7 +247,8 @@ flies.activity <-
         attributes(mvBouts.startTimes) <-
           attributes(mvBouts.lengths) <-
           attributes(mvBouts.mvTime) <-
-          attributes(mvBouts.nr) <- attributes(mvBouts.avgSpeed) <- NULL
+          attributes(mvBouts.nr) <-
+          attributes(mvBouts.avgSpeed) <- NULL
       }
       else{
         mvBouts.lengths <- NA
@@ -360,7 +365,7 @@ flies.avgByGroup <- function(trak,
       speed.groupAvg[, 1] <-
         rowMeans(as.matrix(speed[, sex])) #males
       speed.groupAvg[, 2] <-
-        rowMeans(as.matrix(speed[,!sex])) #females
+        rowMeans(as.matrix(speed[, !sex])) #females
       
     }
   }
@@ -381,7 +386,18 @@ flies.avgByGroup <- function(trak,
     setClass(
       "trak",
       slots = c(
+        area = "data.frame",
+        centroid = "data.frame",
+        direction = "data.frame",
+        majorAxisLength = "data.frame",
+        minorAxisLength = "data.frame",
+        orientation = "data.frame",
+        radius = "data.frame",
         speed = "data.frame",
+        speed.regressed = "data.frame",
+        theta = "data.frame",
+        time = 'numeric',
+        weightedCentroid = "data.frame",
         activity = "list",
         metadata = "data.frame",
         hz = "numeric"
@@ -394,7 +410,7 @@ flies.avgByGroup <- function(trak,
       metadata = data.frame("Male" = groupedSex, "Treatment" = groupedTreatments),
       hz = trak@hz
     )
-  output <- flies.sleepActivity(output)
+  output <- flies.activity(output)
   return(output)
 }
 
@@ -486,18 +502,18 @@ flies.extractTimeWindow <-
     
     trak@activity$result <- activity.window
     trak@metadata <-
-      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples),]
+      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples), ]
     if (returnRawData) {
       trak@speed <-
-        trak@speed[start:end,!(1:ncol(trak@speed) %in% removeSamples)]
+        trak@speed[start:end, !(1:ncol(trak@speed) %in% removeSamples)]
       if (nrow(trak@speed.regressed) > 0)
         trak@speed.regressed <-
-          trak@speed.regressed[start:end,!(1:ncol(trak@speed.regressed) %in% removeSamples)]
+          trak@speed.regressed[start:end, !(1:ncol(trak@speed.regressed) %in% removeSamples)]
       if (nrow(trak@centroid) > 0) {
         cols <-
           c(2 * removeSamples - 1, 2 * removeSamples) #The columns in trak@centroid corresponding to removeSamples
         trak@centroid <-
-          trak@centroid[start:end,!(1:ncol(trak@centroid) %in% cols)]
+          trak@centroid[start:end, !(1:ncol(trak@centroid) %in% cols)]
       }
     }
     else{
@@ -559,10 +575,9 @@ flies.regressSpeed <-
     
     #Model
     cam_dist <- as.vector(cam_dist)
-    speed <- as.vector(as.matrix(trak@speed[smpl, ]))
+    speed <- as.vector(as.matrix(trak@speed[smpl,]))
     filter <- !is.na(speed) & speed != 0
     model <- lm(speed[filter] ~ cam_dist[filter])
-    
     if (summary(model)$coefficients[2, 4] < .01) {
       cam_dist <-
         sqrt((trak@centroid[, xCols] - center[1]) ^ 2 + (trak@centroid[, yCols] - center[2]) ^
@@ -581,7 +596,6 @@ flies.regressSpeed <-
       cat('No significant \"distance from center\" effect detected')
       speed.regressed <- data.frame()
     }
-    
     trak@speed.regressed <- speed.regressed
     return(trak)
   }
