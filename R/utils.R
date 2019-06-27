@@ -188,7 +188,12 @@ readInfo.margo <-
       )
     }
     
-    metadata <- readMetadata(metadataFileName, start, end)
+    if(!is.null(metadataFileName))
+      metadata <- readMetadata(metadataFileName, start, end)
+    else{
+      metadata <- data.frame()
+      warning('No metadata provided')
+    }
     
     data <-
       .trak(
