@@ -43,6 +43,9 @@ lmp <- function (modelobject) {
     package = 'RATrak'
   )
 
+
+# Note that this currently only takes speed, centroid, and time. Of course it can be easily modified to accept more.
+# Also the function is very cumbersome -- a restructure is probably worthwhile
 readInfo <-
   function(speedBinFileName = NULL,
            centroidBinFileName = NULL,
@@ -69,9 +72,6 @@ readInfo <-
                    dataType = 'centroid',
                    size.centroid = size.centroid)
       time <- readBinary(timeBinFileName, dataType = 'time')
-      
-      centroid <-
-        centroid[2:nrow(centroid), ] #Align speed and centroid data
     }
     else if (is.null(centroidBinFileName) &
              !is.null(timeBinFileName) &
@@ -88,9 +88,6 @@ readInfo <-
                    wellCount,
                    dataType = 'centroid',
                    size.centroid = size.centroid)
-      
-      centroid <-
-        centroid[2:nrow(centroid), ] #Align speed and centroid data
     }
     else if (!is.null(centroidBinFileName) &
              !is.null(timeBinFileName) &
@@ -103,9 +100,6 @@ readInfo <-
                    size.centroid = size.centroid)
       time <- readBinary(timeBinFileName, dataType = 'time')
       speed <- flies.calculateSpeed(as.matrix(centroid), time)
-      
-      centroid <-
-        centroid[2:nrow(centroid), ] #Align speed and centroid data
     }
     else if (is.null(centroidBinFileName) &
              is.null(timeBinFileName) &
@@ -127,10 +121,8 @@ readInfo <-
                    dataType = 'centroid',
                    size.centroid = size.centroid)
       speed <-
-        flies.calculateSpeed(as.matrix(centroid)) * 5 #Rescale speed to pixel/s
+        flies.calculateSpeed(as.matrix(centroid)) * hz #Rescale speed to pixel/s
       
-      centroid <-
-        centroid[2:nrow(centroid), ] #Align speed and centroid data
     }
     else
       stop('Neither speed, centroid, or time data was provided')
@@ -160,10 +152,11 @@ checkIfFile = function(name, base) {
     return(NULL)
   }
 }
-# ReadInfo setup for importing margo folderData
+
+
+
+# readInfo setup for importing margo folderData
 # https://www.biorxiv.org/content/10.1101/593046v1
-
-
 
 readInfo.margo <-
   function(rawDataFolder,
@@ -181,6 +174,8 @@ readInfo.margo <-
     
     files = list.files(rawDataFolder)
     
+    #Method for finding all files and assigning according to name
+    # Note that we should refine the regex expression
     for (name in files) {
       assignmentName = tolower(strsplit(name, "[_.]")[[1]][3])
       assign(
@@ -235,7 +230,7 @@ readBinary <-
           byrow = TRUE
         )
       mat <-
-        mat[startFrame:nrow(mat), ] #Discard first few frames if needed
+        mat[startFrame:nrow(mat),] #Discard first few frames if needed
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -258,7 +253,7 @@ readBinary <-
       mat[, xCols] <- mat.tmp[, 1:colCount]
       mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
       mat <-
-        mat[startFrame:nrow(mat), ] #Shift to correct for margo output
+        mat[startFrame:nrow(mat),] #Shift to correct for margo output
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -306,7 +301,7 @@ readBinary.margo <-
       mat[, xCols] <- mat.tmp[, 1:colCount]
       mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
       mat <-
-        mat[startFrame:nrow(mat), ] #Shift to correct for margo output
+        mat[startFrame:nrow(mat),] #Shift to correct for margo output
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -323,7 +318,7 @@ readBinary.margo <-
                ncol = colCount,
                byrow = TRUE)
       #    mat <- sapply(as.data.frame(mat), as.logical)
-      mat = mat[(startFrame):nrow(mat), ] #Discard first few frames if needed
+      mat = mat[(startFrame):nrow(mat),] #Discard first few frames if needed
       return(as.data.frame(mat))
     }
     else if (dataType == "time") {
@@ -360,10 +355,9 @@ readMetadata <- function(fileName, start = 1, end) {
     stop(paste('Could not determine field separator in', fileName))
   
   meta$Treatment <- as.vector(meta$Treatment)
-  data = meta[start:end,]
+  data = meta[start:end, ]
   return(data)
 }
-
 
 
 #This script provides a quick way to group load packages - it's not needed in the package but could be useful for end users in other applications
