@@ -331,16 +331,14 @@ flies.avgByGroup <- function(trak,
       for (i in 1:nTreatments) {
         #There should be a smarter way of doing this within the data.table indexing framework
         #males
-        speed.groupAvg[, i] <-
-          rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] &
-                                     sex]))
+        indexes = treatments == treatments.uniq[i] & sex
+        speed.groupAvg[, i] <- groupMean(speed, indexes)
         groupedSex[i] = TRUE
         groupedTreatments[i] = as.character(treatments.uniq[i])
         
         #females
-        speed.groupAvg[, i + nTreatments] <-
-          rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] &
-                                     !sex]))
+        indexes = treatments == treatments.uniq[i] & !sex
+        speed.groupAvg[, i + nTreatments] <- groupMean(speed, indexes)
         groupedSex[i + nTreatments] = FALSE
         groupedTreatments[i + nTreatments] = as.character(treatments.uniq[i])
       }
@@ -362,10 +360,8 @@ flies.avgByGroup <- function(trak,
         as.data.frame(matrix(nrow = nrow(speed), ncol = 2))
       
       #Direct grouping by sex metadata as passed in
-      speed.groupAvg[, 1] <-
-        rowMeans(as.matrix(speed[, sex])) #males
-      speed.groupAvg[, 2] <-
-        rowMeans(as.matrix(speed[,!sex])) #females
+      speed.groupAvg[, 1] <- groupMean(speed, sex)
+      speed.groupAvg[, 2] <- groupMean(speed, !sex) #females
       
     }
   }
@@ -377,39 +373,18 @@ flies.avgByGroup <- function(trak,
     #All in treatment group to group
     for (i in 1:nTreatments) {
       #There should be a smarter way of doing this within the data.table indexing framework
-      speed.groupAvg[, i] <-
-        rowMeans(as.matrix(speed[, treatments == treatments.uniq[i]]))
+      treatment = treatments == treatments.uniq[i]
+      speed.groupAvg[, i] <-groupMean(speed,treatment)
       groupedTreatments[i] = as.character(treatments.uniq[i])
     }
   }
-  class <-
-    setClass(
-      "trak",
-      slots = c(
-        area = "data.frame",
-        centroid = "data.frame",
-        direction = "data.frame",
-        majorAxisLength = "data.frame",
-        minorAxisLength = "data.frame",
-        orientation = "data.frame",
-        radius = "data.frame",
-        speed = "data.frame",
-        speed.regressed = "data.frame",
-        theta = "data.frame",
-        time = 'numeric',
-        weightedCentroid = "data.frame",
-        activity = "list",
-        metadata = "data.frame",
-        hz = "numeric"
-      )
-    )
   
-  output <-
-    class(
-      speed = as.data.frame(speed.groupAvg),
-      metadata = data.frame("Male" = groupedSex, "Treatment" = groupedTreatments),
-      hz = trak@hz
-    )
+  output <- .trak(
+    speed = as.data.frame(speed.groupAvg),
+    metadata = data.frame("Male" = groupedSex, "Treatment" = groupedTreatments),
+    time = trak@time,
+    hz = trak@hz
+  )
   output <- flies.activity(output)
   return(output)
 }
@@ -502,18 +477,18 @@ flies.extractTimeWindow <-
     
     trak@activity$result <- activity.window
     trak@metadata <-
-      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples),]
+      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples), ]
     if (returnRawData) {
       trak@speed <-
-        trak@speed[start:end,!(1:ncol(trak@speed) %in% removeSamples)]
+        trak@speed[start:end, !(1:ncol(trak@speed) %in% removeSamples)]
       if (nrow(trak@speed.regressed) > 0)
         trak@speed.regressed <-
-          trak@speed.regressed[start:end,!(1:ncol(trak@speed.regressed) %in% removeSamples)]
+          trak@speed.regressed[start:end, !(1:ncol(trak@speed.regressed) %in% removeSamples)]
       if (nrow(trak@centroid) > 0) {
         cols <-
           c(2 * removeSamples - 1, 2 * removeSamples) #The columns in trak@centroid corresponding to removeSamples
         trak@centroid <-
-          trak@centroid[start:end,!(1:ncol(trak@centroid) %in% cols)]
+          trak@centroid[start:end, !(1:ncol(trak@centroid) %in% cols)]
       }
     }
     else{
@@ -558,10 +533,10 @@ flies.regressSpeed <-
     
     #center = The camera center coordinates. The default (664, 524) correspond to a camera mode with resolution 1048 x 1328.
     #If tracking was done using a different camera mode, this has to be changed accordingly
-    if (!is.na(subset) & nrow(trak@speed) > subset) {
+    if(!is.na(subset) & nrow(trak@speed) > subset){
       smpl <- sort(sample(x = 1:nrow(trak@speed), size = subset))
     }
-    else {
+    else{
       smpl <- 1:nrow(trak@speed)
     }
     
@@ -576,8 +551,9 @@ flies.regressSpeed <-
              2)
     
     
-    cam_dist <- as.vector(as.matrix(cam_dist)) # Proper conversion to vector
-    speed <- as.vector(as.matrix(trak@speed[smpl, ]))
+    cam_dist <-
+      as.vector(as.matrix(cam_dist)) # Proper conversion to vector
+    speed <- as.vector(as.matrix(trak@speed[smpl,]))
     filter <- !is.na(speed) & speed != 0
     
     model <- lm(speed[filter] ~ cam_dist[filter])
@@ -585,7 +561,7 @@ flies.regressSpeed <-
       cam_dist <-
         sqrt((trak@centroid[, xCols] - center[1]) ^ 2 + (trak@centroid[, yCols] - center[2]) ^
                2)
-      cam_dist <- as.vector(cam_dist)
+      cam_dist <- as.vector(as.matrix(cam_dist))
       speed <- as.vector(as.matrix(trak@speed))
       
       #Regress out the "distance from camera" effect. I'm not using the intercept, since I don't want to center the speed around zero
