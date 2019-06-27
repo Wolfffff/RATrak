@@ -43,7 +43,6 @@ lmp <- function (modelobject) {
     package = 'RATrak'
   )
 
-
 # Note that this currently only takes speed, centroid, and time. Of course it can be easily modified to accept more.
 # Also the function is very cumbersome -- a restructure is probably worthwhile
 readInfo <-
@@ -230,7 +229,7 @@ readBinary <-
           byrow = TRUE
         )
       mat <-
-        mat[startFrame:nrow(mat), ] #Discard first few frames if needed
+        mat[startFrame:nrow(mat),] #Discard first few frames if needed
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -253,7 +252,7 @@ readBinary <-
       mat[, xCols] <- mat.tmp[, 1:colCount]
       mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
       mat <-
-        mat[startFrame:nrow(mat), ] #Shift to correct for margo output
+        mat[startFrame:nrow(mat),] #Shift to correct for margo output
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -301,7 +300,7 @@ readBinary.margo <-
       mat[, xCols] <- mat.tmp[, 1:colCount]
       mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
       mat <-
-        mat[startFrame:nrow(mat), ] #Shift to correct for margo output
+        mat[startFrame:nrow(mat),] #Shift to correct for margo output
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -318,7 +317,7 @@ readBinary.margo <-
                ncol = colCount,
                byrow = TRUE)
       #    mat <- sapply(as.data.frame(mat), as.logical)
-      mat = mat[(startFrame):nrow(mat), ] #Discard first few frames if needed
+      mat = mat[(startFrame):nrow(mat),] #Discard first few frames if needed
       return(as.data.frame(mat))
     }
     else if (dataType == "time") {
@@ -355,7 +354,7 @@ readMetadata <- function(fileName, start = 1, end) {
     stop(paste('Could not determine field separator in', fileName))
   
   meta$Treatment <- as.vector(meta$Treatment)
-  data = meta[start:end,]
+  data = meta[start:end, ]
   return(data)
 }
 
@@ -384,5 +383,16 @@ classApply <- function(x, FUN, ...) {
 }
 
 groupMean <- function(x, l) {
-  rowMeans(as.matrix(x[, l==T]))
+  rowMeans(as.matrix(x[, l == T]))
+}
+
+paste_ <- function(x){
+  tmp = ""
+  for (w in x) {
+    if(tmp != "")
+      tmp = paste(tmp,w,sep="_")
+    else
+      tmp= w
+  }
+  return(tmp)
 }

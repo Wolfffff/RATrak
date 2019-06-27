@@ -294,98 +294,44 @@ flies.activity <-
 
 
 flies.avgByGroup <- function(trak,
-                             sex = T,
-                             treatments = T) {
-  if (sex == T) {
-    sex <- as.vector(trak@metadata$Male)
-  } else{
-    #For clarity
-    sex <- NA
+                             featuresToGroup = NA,
+                             groupBy = NA) {
+  if (is.na(groupBy) || is.na(groupBy)) {
+    stop("You must provide features ToGroup and identifies to group by.")
   }
   
-  if (treatments == T) {
-    treatments <- as.vector(trak@metadata$Treatment)
-  } else{
-    treatments <- NA
+  output = .trak(time = trak@time,
+               hz = trak@hz)
+  # Assign to appropriate variables -- works around assign and get problem
+  for (feature in featuresToGroup) {
+    assign(feature, slot(trak, feature))
   }
-  speed <- trak@speed
   
-  
-  if (is.na(sex) && is.na(treatments)) {
-    stop("Neither sex nor treatments provided")
+  uniq = NULL
+  for (i in 1:length(groupBy)) {
+    uniq[i] = unique(trak@metadata[groupBy[i]])
   }
-  groupedTreatments = c(NA) #First elements to NA to keep NA checks false until populated
-  groupedSex <- c(NA)
-  if (!is.na(sex[1])) {
-    #Assumes sex = logical vector. T == male
-    if (!is.na(treatments[1])) {
-      treatments.uniq <- unique(treatments)
-      nTreatments <- length(treatments.uniq)
-      speed.groupAvg <-
-        as.data.frame(matrix(nrow = nrow(speed), ncol = 2 * nTreatments))
-      
-      #speed.groupAvg will be organized as:
-      # - column 1 TO nTreatments = males in each treatment
-      # - column nTreatments + 1 TO 2*nTreatments = females in each treatment
-      
-      for (i in 1:nTreatments) {
-        #There should be a smarter way of doing this within the data.table indexing framework
-        #males
-        indexes = treatments == treatments.uniq[i] & sex
-        speed.groupAvg[, i] <- groupMean(speed, indexes)
-        groupedSex[i] = TRUE
-        groupedTreatments[i] = as.character(treatments.uniq[i])
-        
-        #females
-        indexes = treatments == treatments.uniq[i] & !sex
-        speed.groupAvg[, i + nTreatments] <- groupMean(speed, indexes)
-        groupedSex[i + nTreatments] = FALSE
-        groupedTreatments[i + nTreatments] = as.character(treatments.uniq[i])
-      }
-      
-      #Calculate SDs of the above means - Not implemented
-      # if(sdShading){
-      #   speed.groupSD <- as.data.frame(matrix(nrow = nrow(speed), ncol = 2*nTreatments))
-      #
-      #   for(i in 1:nTreatments){ #There should be a smarter way of doing this within the data.table indexing framework
-      #     speed.groupSD[,i] <- rowSds(as.matrix(speed[, treatments == treatments.uniq[i] & sex])) #males
-      #     speed.groupSD[,i + nTreatments] <- rowSds(as.matrix(speed[, treatments == treatments.uniq[i] & !sex])) #females
-      #   }
-      # }
-    }
-    #Just sex
-    else{
-      groupedSex <- c(1, 2) #Male & female
-      speed.groupAvg <-
-        as.data.frame(matrix(nrow = nrow(speed), ncol = 2))
-      
-      #Direct grouping by sex metadata as passed in
-      speed.groupAvg[, 1] <- groupMean(speed, sex)
-      speed.groupAvg[, 2] <- groupMean(speed, !sex) #females
-      
+  
+  combin = expand.grid(uniq)
+  groups = list()
+  colnames(combin) = groupBy
+  names = apply(combin, 1, paste_)
+  for (f in featuresToGroup) {
+    tmp = get(f)
+    for (row in 1:nrow(combin)) {
+      indexes = which(apply(trak@metadata[groupBy], 1, function(x)
+        all(x == combin[row,])))
+        tmpMeans = rowMeans(as.matrix(tmp[, indexes]))
+      groups[[f]][[names[row]]] = tmpMeans
     }
   }
-  #Just treatments - no sex
-  else if (!is.na(treatments[1])) {
-    treatments.uniq <- unique(treatments)
-    nTreatments <- length(treatments.uniq)
-    speed.groupAvg <- matrix(nrow = nrow(speed), ncol = nTreatments)
-    #All in treatment group to group
-    for (i in 1:nTreatments) {
-      #There should be a smarter way of doing this within the data.table indexing framework
-      treatment = treatments == treatments.uniq[i]
-      speed.groupAvg[, i] <-groupMean(speed,treatment)
-      groupedTreatments[i] = as.character(treatments.uniq[i])
-    }
+  output@metadata = combin
+  for(n in featuresToGroup) {
+    slot(output,n) = as.data.frame(groups[[n]])
+    colnames(slot(output,n)) = names
   }
-  
-  output <- .trak(
-    speed = as.data.frame(speed.groupAvg),
-    metadata = data.frame("Male" = groupedSex, "Treatment" = groupedTreatments),
-    time = trak@time,
-    hz = trak@hz
-  )
   output <- flies.activity(output)
+  
   return(output)
 }
 
@@ -477,18 +423,18 @@ flies.extractTimeWindow <-
     
     trak@activity$result <- activity.window
     trak@metadata <-
-      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples), ]
+      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples),]
     if (returnRawData) {
       trak@speed <-
-        trak@speed[start:end, !(1:ncol(trak@speed) %in% removeSamples)]
+        trak@speed[start:end,!(1:ncol(trak@speed) %in% removeSamples)]
       if (nrow(trak@speed.regressed) > 0)
         trak@speed.regressed <-
-          trak@speed.regressed[start:end, !(1:ncol(trak@speed.regressed) %in% removeSamples)]
+          trak@speed.regressed[start:end,!(1:ncol(trak@speed.regressed) %in% removeSamples)]
       if (nrow(trak@centroid) > 0) {
         cols <-
           c(2 * removeSamples - 1, 2 * removeSamples) #The columns in trak@centroid corresponding to removeSamples
         trak@centroid <-
-          trak@centroid[start:end, !(1:ncol(trak@centroid) %in% cols)]
+          trak@centroid[start:end,!(1:ncol(trak@centroid) %in% cols)]
       }
     }
     else{
@@ -533,7 +479,7 @@ flies.regressSpeed <-
     
     #center = The camera center coordinates. The default (664, 524) correspond to a camera mode with resolution 1048 x 1328.
     #If tracking was done using a different camera mode, this has to be changed accordingly
-    if(!is.na(subset) & nrow(trak@speed) > subset){
+    if (!is.na(subset) & nrow(trak@speed) > subset) {
       smpl <- sort(sample(x = 1:nrow(trak@speed), size = subset))
     }
     else{
@@ -553,7 +499,7 @@ flies.regressSpeed <-
     
     cam_dist <-
       as.vector(as.matrix(cam_dist)) # Proper conversion to vector
-    speed <- as.vector(as.matrix(trak@speed[smpl,]))
+    speed <- as.vector(as.matrix(trak@speed[smpl, ]))
     filter <- !is.na(speed) & speed != 0
     
     model <- lm(speed[filter] ~ cam_dist[filter])
