@@ -365,7 +365,7 @@ flies.avgByGroup <- function(trak,
       speed.groupAvg[, 1] <-
         rowMeans(as.matrix(speed[, sex])) #males
       speed.groupAvg[, 2] <-
-        rowMeans(as.matrix(speed[,!sex])) #females
+        rowMeans(as.matrix(speed[, !sex])) #females
       
     }
   }
@@ -502,18 +502,18 @@ flies.extractTimeWindow <-
     
     trak@activity$result <- activity.window
     trak@metadata <-
-      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples),]
+      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples), ]
     if (returnRawData) {
       trak@speed <-
-        trak@speed[start:end,!(1:ncol(trak@speed) %in% removeSamples)]
+        trak@speed[start:end, !(1:ncol(trak@speed) %in% removeSamples)]
       if (nrow(trak@speed.regressed) > 0)
         trak@speed.regressed <-
-          trak@speed.regressed[start:end,!(1:ncol(trak@speed.regressed) %in% removeSamples)]
+          trak@speed.regressed[start:end, !(1:ncol(trak@speed.regressed) %in% removeSamples)]
       if (nrow(trak@centroid) > 0) {
         cols <-
           c(2 * removeSamples - 1, 2 * removeSamples) #The columns in trak@centroid corresponding to removeSamples
         trak@centroid <-
-          trak@centroid[start:end,!(1:ncol(trak@centroid) %in% cols)]
+          trak@centroid[start:end, !(1:ncol(trak@centroid) %in% cols)]
       }
     }
     else{
@@ -558,10 +558,10 @@ flies.regressSpeed <-
     
     #center = The camera center coordinates. The default (664, 524) correspond to a camera mode with resolution 1048 x 1328.
     #If tracking was done using a different camera mode, this has to be changed accordingly
-    if (!is.na(subset) & nrow(trak@speed) > subset) {
+    if(!is.na(subset) & nrow(trak@speed) > subset){
       smpl <- sort(sample(x = 1:nrow(trak@speed), size = subset))
     }
-    else {
+    else{
       smpl <- 1:nrow(trak@speed)
     }
     
@@ -576,8 +576,9 @@ flies.regressSpeed <-
              2)
     
     
-    cam_dist <- as.vector(as.matrix(cam_dist)) # Proper conversion to vector
-    speed <- as.vector(as.matrix(trak@speed[smpl, ]))
+    cam_dist <-
+      as.vector(as.matrix(cam_dist)) # Proper conversion to vector
+    speed <- as.vector(as.matrix(trak@speed[smpl,]))
     filter <- !is.na(speed) & speed != 0
     
     model <- lm(speed[filter] ~ cam_dist[filter])
@@ -585,7 +586,7 @@ flies.regressSpeed <-
       cam_dist <-
         sqrt((trak@centroid[, xCols] - center[1]) ^ 2 + (trak@centroid[, yCols] - center[2]) ^
                2)
-      cam_dist <- as.vector(cam_dist)
+      cam_dist <- as.vector(as.matrix(cam_dist))
       speed <- as.vector(as.matrix(trak@speed))
       
       #Regress out the "distance from camera" effect. I'm not using the intercept, since I don't want to center the speed around zero
