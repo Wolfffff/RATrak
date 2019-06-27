@@ -331,16 +331,14 @@ flies.avgByGroup <- function(trak,
       for (i in 1:nTreatments) {
         #There should be a smarter way of doing this within the data.table indexing framework
         #males
-        speed.groupAvg[, i] <-
-          rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] &
-                                     sex]))
+        indexes = treatments == treatments.uniq[i] & sex
+        speed.groupAvg[, i] <- groupMean(speed, indexes)
         groupedSex[i] = TRUE
         groupedTreatments[i] = as.character(treatments.uniq[i])
         
         #females
-        speed.groupAvg[, i + nTreatments] <-
-          rowMeans(as.matrix(speed[, treatments == treatments.uniq[i] &
-                                     !sex]))
+        indexes = treatments == treatments.uniq[i] & !sex
+        speed.groupAvg[, i + nTreatments] <- groupMean(speed, indexes)
         groupedSex[i + nTreatments] = FALSE
         groupedTreatments[i + nTreatments] = as.character(treatments.uniq[i])
       }
@@ -362,10 +360,8 @@ flies.avgByGroup <- function(trak,
         as.data.frame(matrix(nrow = nrow(speed), ncol = 2))
       
       #Direct grouping by sex metadata as passed in
-      speed.groupAvg[, 1] <-
-        rowMeans(as.matrix(speed[, sex])) #males
-      speed.groupAvg[, 2] <-
-        rowMeans(as.matrix(speed[, !sex])) #females
+      speed.groupAvg[, 1] <- groupMean(speed, sex)
+      speed.groupAvg[, 2] <- groupMean(speed, !sex) #females
       
     }
   }
@@ -377,39 +373,18 @@ flies.avgByGroup <- function(trak,
     #All in treatment group to group
     for (i in 1:nTreatments) {
       #There should be a smarter way of doing this within the data.table indexing framework
-      speed.groupAvg[, i] <-
-        rowMeans(as.matrix(speed[, treatments == treatments.uniq[i]]))
+      treatment = treatments == treatments.uniq[i]
+      speed.groupAvg[, i] <-groupMean(speed,treatment)
       groupedTreatments[i] = as.character(treatments.uniq[i])
     }
   }
-  class <-
-    setClass(
-      "trak",
-      slots = c(
-        area = "data.frame",
-        centroid = "data.frame",
-        direction = "data.frame",
-        majorAxisLength = "data.frame",
-        minorAxisLength = "data.frame",
-        orientation = "data.frame",
-        radius = "data.frame",
-        speed = "data.frame",
-        speed.regressed = "data.frame",
-        theta = "data.frame",
-        time = 'numeric',
-        weightedCentroid = "data.frame",
-        activity = "list",
-        metadata = "data.frame",
-        hz = "numeric"
-      )
-    )
   
-  output <-
-    class(
-      speed = as.data.frame(speed.groupAvg),
-      metadata = data.frame("Male" = groupedSex, "Treatment" = groupedTreatments),
-      hz = trak@hz
-    )
+  output <- .trak(
+    speed = as.data.frame(speed.groupAvg),
+    metadata = data.frame("Male" = groupedSex, "Treatment" = groupedTreatments),
+    time = trak@time,
+    hz = trak@hz
+  )
   output <- flies.activity(output)
   return(output)
 }

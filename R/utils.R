@@ -230,7 +230,7 @@ readBinary <-
           byrow = TRUE
         )
       mat <-
-        mat[startFrame:nrow(mat),] #Discard first few frames if needed
+        mat[startFrame:nrow(mat), ] #Discard first few frames if needed
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -253,7 +253,7 @@ readBinary <-
       mat[, xCols] <- mat.tmp[, 1:colCount]
       mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
       mat <-
-        mat[startFrame:nrow(mat),] #Shift to correct for margo output
+        mat[startFrame:nrow(mat), ] #Shift to correct for margo output
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -301,7 +301,7 @@ readBinary.margo <-
       mat[, xCols] <- mat.tmp[, 1:colCount]
       mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
       mat <-
-        mat[startFrame:nrow(mat),] #Shift to correct for margo output
+        mat[startFrame:nrow(mat), ] #Shift to correct for margo output
       close(file)
       mat[is.nan(mat)] = 0
       return(as.data.frame(mat))
@@ -318,7 +318,7 @@ readBinary.margo <-
                ncol = colCount,
                byrow = TRUE)
       #    mat <- sapply(as.data.frame(mat), as.logical)
-      mat = mat[(startFrame):nrow(mat),] #Discard first few frames if needed
+      mat = mat[(startFrame):nrow(mat), ] #Discard first few frames if needed
       return(as.data.frame(mat))
     }
     else if (dataType == "time") {
@@ -355,7 +355,7 @@ readMetadata <- function(fileName, start = 1, end) {
     stop(paste('Could not determine field separator in', fileName))
   
   meta$Treatment <- as.vector(meta$Treatment)
-  data = meta[start:end, ]
+  data = meta[start:end,]
   return(data)
 }
 
@@ -370,4 +370,19 @@ loadPackages <- function(names) {
   for (pkg in names) {
     library(pkg, character.only = TRUE)
   }
+}
+
+
+#
+classApply <- function(x, FUN, ...) {
+  cl <- class(x)
+  result <- list()
+  for (i in propertyNames(cl)) {
+    result[[i]] <- FUN(slot(x, i), ...)
+  }
+  result
+}
+
+groupMean <- function(x, l) {
+  rowMeans(as.matrix(x[, l==T]))
 }
