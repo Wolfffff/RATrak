@@ -1151,7 +1151,7 @@ plot.gxeBoxes <-
   }
 
 
-plot.singleFlyDirectonality <- function(trak, flyNumber,startIndex=5,endIndex=100,colorPalette="Darjeeling2") {
+plot.singleFlyDirectonality <- function(trak, flyNumber,startIndex=5,endIndex=100,colorPalette="Darjeeling2",...) {
   
   coords <- trak@centroid[startIndex:endIndex, c(flyNumber * 2 - 1, flyNumber * 2)]
   coords[, 2] <- 1 - coords[, 2] #flip y coordinates
@@ -1166,9 +1166,7 @@ plot.singleFlyDirectonality <- function(trak, flyNumber,startIndex=5,endIndex=10
   plot(
     coords,
     col = cols,
-    pch = 19,
-    xlab='',
-    ylab=''
+    ...
   )
 }
 
@@ -1177,7 +1175,6 @@ plot.singleFlyDensity <- function(trak, flyNumber,startIndex=5,endIndex=1000, bi
   coords <- trak@centroid[startIndex:endIndex, c(flyNumber * 2 - 1, flyNumber * 2)]
   coords[, 2] <- 1 - coords[, 2] #flip y coordinates
   coords =coords[coords[1]!=0 & coords[2]!=0,]
-  
   cols = wes_palette(colorPalette,2,"continuous")
   ggplot(coords, mapping = aes_string(x = names(coords)[1], y = names(coords)[2])) +
     geom_hex(bins = 20) +
