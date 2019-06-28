@@ -16,7 +16,8 @@ flies.activity <-
            emptyWellThreshold = 5,
            errorThreshold = 3 * 60 ^ 2,
            erroneousSleepDataThreshold = 5,
-           speedUnit = 'dist/s') {
+           speedUnit = 'dist/s',
+           noiseLevelThreshold = 1) {
     #sleepThreshold = time of no movement to call sleep (s). Default 5 min
     #deathThreshold = Minimum time of no movement to call dead (s). If no movement > deathThreshold AND nomore movement after that point, call dead. Default 1.5 h
     #mvFracThreshold = threshold to call bout of movement. The fly needs to spend at least this fraction of time moving
@@ -24,7 +25,9 @@ flies.activity <-
     #mvSpacerThreshold = threshold to call bout of movement. Bouts need to be separated by at least this much non-movement
     #emptyWellThreshold = If the total number of run lengths is < emptyWellThreshold, discard that well as empty/fly dead from the start
     #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
-    #erroneous(Sleep/Movement)DataThreshold = cutoff for codensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
+    #erroneous(Sleep/Movement)DataThreshold = cutoff for condensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
+    #noiseLevelThreshold = cutoff to be considered to movement( if movement < noiseLevelThreshold, we assume movement = 0). Default 1
+
     
     sleepMin <- sleepThreshold * trak@hz
     deadMin <- deathThreshold * trak@hz
@@ -43,7 +46,7 @@ flies.activity <-
     }
     else
       stop('trak object does not contain speed data')
-    
+    speed[speed < noiseLevelThreshold] = 0
     #Run length encoding of movement > 0, == streaks of movement
     speed.mov <-
       apply(
@@ -292,12 +295,11 @@ flies.activity <-
   }
 
 
-
 flies.avgByGroup <- function(trak,
                              featuresToGroup = NA,
                              groupBy = NA) {
   if (is.na(groupBy) || is.na(groupBy)) {
-    stop("You must provide features ToGroup and identifies to group by.")
+    stop("You must provide features to group and identifiers to group by.")
   }
   
   output = .trak(time = trak@time,
@@ -322,17 +324,39 @@ flies.avgByGroup <- function(trak,
       indexes = which(apply(trak@metadata[groupBy], 1, function(x)
         all(x == combin[row,])))
         tmpMeans = rowMeans(as.matrix(tmp[, indexes]))
-      groups[[f]][[names[row]]] = tmpMeans
+      groups[[f]][[toString(names[row])]] = tmpMeans
     }
   }
   output@metadata = combin
   for(n in featuresToGroup) {
     slot(output,n) = as.data.frame(groups[[n]])
-    colnames(slot(output,n)) = names
+    colnames(slot(output,n)) = tolower(names)
   }
   output <- flies.activity(output)
   
   return(output)
+}
+
+
+flies.group <- function(trak, groupBy = NA) {
+  if (is.na(groupBy)) {
+    stop("You must provide identifiers to group by.")
+  }
+  uniq = NULL
+  for (i in 1:length(groupBy)) {
+    uniq[i] = unique(trak@metadata[groupBy[i]])
+  }
+  
+  combin = expand.grid(uniq)
+  groups = list()
+  colnames(combin) = groupBy
+  names = apply(combin, 1, paste_)
+  for (row in 1:nrow(combin)) {
+    indexes = which(unname(apply(trak@metadata[groupBy], 1, function(x)
+      all(x == combin[row, ]))))
+    groups[[tolower(toString(names[row]))]] = indexes
+  }
+  return(groups)
 }
 
 
