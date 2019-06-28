@@ -27,15 +27,15 @@ lmp <- function (modelobject) {
       centroid = "data.frame",
       direction = "data.frame",
       dropped = "data.frame",
-      majorAxisLength = "data.frame",
-      minorAxisLength = "data.frame",
+      majoraxislength = "data.frame",
+      minoraxislength = "data.frame",
       orientation = "data.frame",
       radius = "data.frame",
       speed = "data.frame",
       speed.regressed = "data.frame",
       theta = "data.frame",
       time = 'numeric',
-      weightedCentroid = "data.frame",
+      weightedcentroid = "data.frame",
       activity = "list",
       metadata = "data.frame",
       hz = "numeric"
@@ -200,15 +200,15 @@ readInfo.margo <-
         centroid = centroid,
         direction = direction,
         dropped = dropped,
-        majorAxisLength = majoraxislength,
-        minorAxisLength = minoraxislength,
+        majoraxislength = majoraxislength,
+        minoraxislength = minoraxislength,
         orientation = orientation,
         radius = radius,
         speed = speed,
         speed.regressed = data.frame(),
         theta = theta,
         time = time,
-        weightedCentroid = weightedcentroid,
+        weightedcentroid = weightedcentroid,
         metadata = metadata,
         hz = hz
       )
@@ -287,7 +287,7 @@ readBinary.margo <-
            startFrame = 1) {
     file <- file(fileName, "rb")
     
-    if (dataType == 'centroid' || dataType == "weightedCentroid") {
+    if (dataType == 'centroid' || dataType == "weightedcentroid") {
       mat.tmp <-
         matrix(
           readBin(file, numeric(), n = 1e9, size = size.centroid),

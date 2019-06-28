@@ -1,10 +1,10 @@
 #Processing matrix data
 #flies.activity
-#flies.avgByGroup
 #
 #
 #
-
+#
+#
 
 flies.activity <-
   function(trak,
@@ -376,15 +376,16 @@ flies.group <- function(trak, groupBy = NA) {
   return(groups)
 }
 
-
+#Convenience function to extract activity phenotypes within a time window from a trak object
 flies.extractTimeWindow <-
   function(trak,
            start,
            end,
-           timeScale,
-           returnRawData = F,
+           timeScale = 'min',
+           features = c("centroid","speed","area","theta","majoraxislength","minoraxislength","direction","orientation","time"),
+           returnRawData = T,
            removeSamples = NULL) {
-    #Convenience function to extract activity phenotypes within a time window from a trak object
+
     if (timeScale %in% c('h', 'hour')) {
       timeFactor = trak@hz * 60 ^ 2
     } else if (timeScale %in% c('m', 'min', 'minute')) {
@@ -393,15 +394,16 @@ flies.extractTimeWindow <-
       timeFactor = 1
     } else if (timeScale %in% c('s', 'sec')) {
       timeFactor = trak@hz
-    }
-    else
+    } else{
       stop(paste('Did not recognize timeScale:', timeScale))
+    }
     
     start <- start * timeFactor
-    if (end == 'end')
+    if (end == 'end'){
       end <- nrow(trak@speed) + 1
-    else
+    } else{ 
       end <- end * timeFactor
+    }
     
     activity.window <- list()
     j <- 1
@@ -466,8 +468,12 @@ flies.extractTimeWindow <-
     trak@metadata <-
       trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples),]
     if (returnRawData) {
-      trak@speed <-
-        trak@speed[start:end,!(1:ncol(trak@speed) %in% removeSamples)]
+      for (name in features[!(features == "time" & features != "centroid" )]) {
+        slot(trak,name) = slot(trak,name)[start:end,!((1:ncol(slot(trak,name))) %in% removeSamples)]
+      }
+      trak@time= trak@time[start:end]
+      
+      #Fixes for specfic types - regress and centroid
       if (nrow(trak@speed.regressed) > 0)
         trak@speed.regressed <-
           trak@speed.regressed[start:end,!(1:ncol(trak@speed.regressed) %in% removeSamples)]
@@ -479,9 +485,9 @@ flies.extractTimeWindow <-
       }
     }
     else{
-      trak@speed <- data.frame()
-      trak@speed.regressed <- data.frame()
-      trak@centroid <- data.frame()
+      for (name in features) {
+        slot(trak,name) = NULL
+      }
     }
     return(trak)
   }
@@ -576,10 +582,13 @@ flies.extractActivity <- function(trak) {
     sapply(trak@activity$result, function(x) {
       mean(x$mvBouts.mvTime / x$mvBouts.lengths, na.rm = T)
     })
-  avgSpeed <-
+  #Avg speed during movement bout
+  mvBout.avgSpeed <-
     sapply(trak@activity$result, function(x) {
       mean(x$mvBouts.avgSpeed, na.rm = T)
     })
+  avgSpeed <-
+    as.vector(mapply(mean, trak@speed[,colnames(trak@speed)]))
   mvNr <- sapply(trak@activity$result, function(x) {
     x$mvBouts.nr
   })
@@ -610,6 +619,7 @@ flies.extractActivity <- function(trak) {
         avgMvLength = avgMvLength,
         avgMvFrac = avgMvFrac,
         avgSpeed = avgSpeed,
+        mvBout.avgSpeed = mvBout.avgSpeed,
         mvNr = mvNr,
         sleepNr = sleepNr,
         avgSleepLength = avgSleepLength,

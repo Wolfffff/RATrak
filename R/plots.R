@@ -1149,3 +1149,39 @@ plot.gxeBoxes <-
     )
     #dev.off()
   }
+
+
+plot.singleFlyDirectonality <- function(trak, flyNumber,startIndex=5,endIndex=100,colorPalette="Darjeeling2") {
+  
+  coords <- trak@centroid[startIndex:endIndex, c(flyNumber * 2 - 1, flyNumber * 2)]
+  coords[, 2] <- 1 - coords[, 2] #flip y coordinates
+  coords =coords[coords[1]!=0 & coords[2]!=0,]
+  xlim <- range(coords[coords[, 1] > 0, 1])
+  ylim <- range(coords[coords[, 2] < 0, 2])
+  direction <- trak@direction[startIndex:endIndex, flyNumber]
+  ncols <- (length(unique(direction)))
+  pal <- colorRampPalette(wes_palette(colorPalette, n = 2, "discrete"))
+  cols <- pal(ncols)[as.numeric(cut(direction, breaks = ncols))]
+  
+  plot(
+    coords,
+    col = cols,
+    pch = 19,
+    xlab='',
+    ylab=''
+  )
+}
+
+plot.singleFlyDensity <- function(trak, flyNumber,startIndex=5,endIndex=1000, bins = 10, wesAndersonPalette = "BottleRocket2") {
+  
+  coords <- trak@centroid[startIndex:endIndex, c(flyNumber * 2 - 1, flyNumber * 2)]
+  coords[, 2] <- 1 - coords[, 2] #flip y coordinates
+  coords =coords[coords[1]!=0 & coords[2]!=0,]
+  
+  cols = wes_palette(colorPalette,2,"continuous")
+  ggplot(coords, mapping = aes_string(x = names(coords)[1], y = names(coords)[2])) +
+    geom_hex(bins = 20) +
+    scale_fill_gradientn(colors=cols) +
+    ggtitle("Hexbin") +
+    xlab("X") + ylab("Y")
+}
