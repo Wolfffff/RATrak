@@ -295,7 +295,24 @@ flies.activity <-
   }
 
 
-flies.avgByGroup <- function(trak,
+flies.activityByGroup <- function(trak, groups = NA,
+                                  metricsToAvg = c("sleepNr","sleepLengths","mvBouts.lengths","mvBouts.mvTime","mvBouts.avgSpeed")) {
+  if (is.na(groups)) {
+    stop("You must provide features to groups(list of indices).")
+  }
+  
+  combinedInfo = NULL
+  # https://stackoverflow.com/questions/18538977/combine-merge-lists-by-elements-names
+  for (i in 1:length(groups)) {
+    combinedInfo[[names(groups)[i]]] = setNames(do.call(mapply, c(
+      FUN = c, lapply(trak@activity$result[groups[[i]]], `[`, metricsToAvg)
+    )), metricsToAvg)
+  }
+  return(combinedInfo)
+}
+
+
+flies.avgFeaturesByGroup <- function(trak,
                              featuresToGroup = NA,
                              groupBy = NA) {
   if (is.na(groupBy) || is.na(groupBy)) {

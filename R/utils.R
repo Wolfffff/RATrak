@@ -357,8 +357,8 @@ readMetadata <- function(fileName, start = 1, end) {
     meta <- read.table(fileName, header = TRUE, sep = '\t')
   else
     stop(paste('Could not determine field separator in', fileName))
+  colnames(meta) = tolower(colnames(meta))
   
-  meta$Treatment <- as.vector(meta$Treatment)
   data = meta[start:end, ]
   return(data)
 }
