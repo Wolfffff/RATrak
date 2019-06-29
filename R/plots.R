@@ -15,34 +15,34 @@
 
 plot.flyMv_mvNr <-
   function(trak,
-           treatmentLevels = NA,
+           treatment,
            test = 'wilcox',
            ...) {
     #Naming
     activity <- trak@activity$result
-    treatments = trak@metadata$Treatment
-    
+    treatments = trak@metadata$treatment
     treatments <- as.factor(treatments)
     activity_treatments <- split(activity, treatments)
-    avgSleep <- list()
-    for (i in 1:length(activity_treatments))
-      avgSleep[[i]] <-
+    avgMvNr <- list()
+    for (i in 1:length(activity_treatments)){
+      avgMvNr[[i]] <-
       sapply(
         activity_treatments[[i]],
         FUN = function(x) {
-          mean(x$mvNr)
+          x$mvBouts.nr
         }
       )
-    if (!all(is.na(avgSleep[[1]]))) {
-    if (is.na(treatmentLevels[1]))
-      treatmentLevels <- paste('group', levels(treatments))
+    }
+    
+    if (!all(is.na(avgMvNr[[1]]))) {
+    treatmentLevels <- paste('group', levels(treatments))
     
       box <-
         boxplot(
-          avgSleep,
+          avgMvNr,
           xaxt = 'n',
           frame = F,
-          ylim = range(avgSleep, na.rm = TRUE)
+          ylim = range(avgMvNr, na.rm = TRUE)
         )
       axis(
         side = 1,
@@ -59,25 +59,30 @@ plot.flyMv_mvNr <-
       
       if (nlevels(treatments) == 2 & !is.na(test)) {
         if (test == 'wilcox') {
-          p <- wilcox.test(avgSleep[[1]], avgSleep[[2]])$p.value
+          p <- wilcox.test(avgMvNr[[1]], avgMvNr[[2]])$p.value
           # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
           legend('topleft', paste('p =', round(p, digits = 3)), title = 'Wilcoxon')
         }
         if (test == 't.test') {
-          p <- t.test(avgSleep[[1]], avgSleep[[2]])$p.value
+          p <- t.test(avgMvNr[[1]], avgMvNr[[2]])$p.value
           # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
           legend('topleft', paste('p =', round(p, digits = 3)), title = 't-test')
         }
       }
-      if (nlevels(treatments) > 2 & !is.na(test)) {
-        model <- lm(unlist(avgSleep) ~ as.factor(treatments))
+      else if (nlevels(treatments) > 2 & !is.na(test)) {
+        model <- lm(unlist(avgMvNr) ~ as.factor(treatments))
+        p <- lmp(model)
+        # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
+        legend('topleft', paste('p =', round(p, digits = 3)), title = 'Anova')
+      } else if (nlevels(treatments) == 2 & !is.na(test)) {
+        model <- lm(unlist(avgMvNr) ~ as.factor(treatments))
         p <- lmp(model)
         # text(x = 1.5, y = mean(box$stats[5,]), labels = paste('p =', round(p, digits = 3)), cex = 2)
         legend('topleft', paste('p =', round(p, digits = 3)), title = 'Anova')
       }
     }
     else{
-      print("No sleep bouts available")
+      print("No movement bouts available")
     }
   }
 
@@ -167,8 +172,8 @@ plot.flyMv_cumMv <-
     #Naming to clean up later code implementation
     speed <- trak@speed
     hz <- trak@hz
-    treatments <- trak@metadata$Treatment
-    sex <- trak@metadata$Male
+    treatments <- trak@metadata$treatment
+    sex <- trak@metadata$male
     
     if (time == 'min') {
       timeFactor <- 60
@@ -288,8 +293,8 @@ plot.flyMv_rollAvg <- function(trak,
                                time = 'min',
                                treatmentLevels = NA,
                                title = NA,
-                               width = 5 * 60 ^ 2,
-                               by = 5 * 60 * 10,
+                               width = 5 * 60,
+                               by = 5 * 60 * 5,
                                legend.treat = 'topright',
                                legend.sex = 'top',
                                legend.treat_title = '',
@@ -298,8 +303,8 @@ plot.flyMv_rollAvg <- function(trak,
   #Naming to clean up code
   speed <- trak@speed
   hz <- trak@hz
-  treatments <- trak@metadata$Treatment
-  sex <- trak@metadata$Male
+  treatments <- trak@metadata$treatment
+  sex <- trak@metadata$male
   framesPerTime = 0
   if (time == 'min') {
     framesPerTime <- hz * 60
@@ -644,8 +649,8 @@ plot.flyMv_rollNoMov <- function(trak,
                                  by = 1,
                                  ...) {
   speed <- trak@speed
-  treatments <- trak@metadata$Treatment
-  sex <- trak@metadata$Male
+  treatments <- trak@metadata$treatment
+  sex <- trak@metadata$male
   hz <- trak@hz
   
   if (!require(zoo))
@@ -758,7 +763,7 @@ plot.flyMv_survival <-
     #Naming to clean up code
     activity <- trak@activity$result
     hz <- trak@hz
-    treatments <- trak@metadata$Treatment
+    treatments <- trak@metadata$treatment
     
     #TO DO: support for just one group
     if (time == 'min')
@@ -876,7 +881,7 @@ plot.flyMv_avgSleepLength <-
            ...) {
     #Naming to clean up code
     activity <- trak@activity$result
-    treatments = trak@metadata$Treatment
+    treatments = trak@metadata$treatment
     hz <- trak@hz
     
     # treatment.avgSleep <- sapply(activity[treatment], FUN = function(x){mean(x$sleepLengths)})/60
@@ -938,7 +943,7 @@ plot.flyMv_sleepNr <-
            test = 'wilcox') {
     #Naming to clean up code
     activity <- trak@activity$result
-    treatments = trak@metadata$Treatment
+    treatments = trak@metadata$treatment
     
     treatments <- as.factor(treatments)
     activity_treatments <- split(activity, treatments)
@@ -948,7 +953,7 @@ plot.flyMv_sleepNr <-
       sapply(
         activity_treatments[[i]],
         FUN = function(x) {
-          mean(x$sleepNr)
+          x$sleepNr
         }
       )
     
@@ -997,7 +1002,7 @@ plot.flyMv_avgMvLength <-
            test = 'wilcox') {
     #Naming
     activity <- trak@activity$result
-    treatments = trak@metadata$Treatment
+    treatments = trak@metadata$treatment
     hz <- trak@hz
     
     treatments <- as.factor(treatments)
@@ -1072,7 +1077,7 @@ plot.gxeBoxes <-
       }
     }
     fam <- as.character(meta$Family)
-    rotenone <- meta$Treatment
+    rotenone <- meta$treatment
     
     #Fit models with and without interaction
     model.add <- summary(lm(y ~ rotenone + fam))

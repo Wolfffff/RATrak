@@ -4,7 +4,7 @@
 readMetadata
 }
 \description{
-Simply reads in a CSV and converts the treatments column to a vector
+Simply reads in a CSV
 }
 \usage{
 readMetadata(fileName)
