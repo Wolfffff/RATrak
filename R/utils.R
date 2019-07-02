@@ -166,8 +166,9 @@ readInfo.margo <-
            hz = 5,
            startFrame = 4,
            inferPhenos = F,
-           size.centroid = NA_integer_, 
-           load.weightedcentroid = F) {
+           size.centroid = NA_integer_,
+           featuresToIgnore=c("weightedcentroid","majoraxislength","minoraxislength", "direction",
+                                 "orientation","radius","theta","dropped","area")) {
     #WARNING: The precision for the centroid data is not consistent across autotracker versions
     #If the centroid coordinates make no sense, try changing size.centroid
     #This is passed on as the size argument to readBin()
@@ -178,16 +179,18 @@ readInfo.margo <-
     # Note that we should refine the regex expression
     for (name in files) {
       assignmentName = tolower(strsplit(name, "[_.]")[[1]][3])
-      assign(
-        assignmentName,
-        readBinary.margo(
-          paste0(rawDataFolder, name),
-          dataType = assignmentName,
-          colCount = wellCount,
-          load.weightedcentroid = load.weightedcentroid,
+      if (assignmentName %in% featuresToIgnore) {
+        assign(assignmentName, data.frame())
+      } else{
+        assign(
+          assignmentName,
+          readBinary.margo(
+            paste0(rawDataFolder, name),
+            dataType = assignmentName,
+            colCount = wellCount
+          )
         )
-      )
-      gc() #Garbage collection
+      }
     }
     
     if(!is.null(metadataFileName))
@@ -287,31 +290,34 @@ readBinary.margo <-
            dataType = NULL,
            size.centroid = 4,
            size.default = 4,
-           startFrame = 1,
-           load.weightedcentroid) {
+           startFrame = 1) {
     file <- file(fileName, "rb")
     
-    if (dataType == 'centroid' || (dataType == "weightedcentroid" & load.weightedcentroid)) {
-      mat.tmp <-
+    if (dataType == 'centroid' || dataType == "weightedcentroid") {
+      mat <-
         matrix(
           readBin(file, numeric(), n = 1e9, size = size.centroid),
           ncol = colCount * 2,
           byrow = TRUE
         )
+      close(file)
+      
+      #Note memory issue here because of mat and mat.tmp being available together
       #Reshape matrix
-      mat <- matrix(ncol = ncol(mat.tmp), nrow = nrow(mat.tmp))
       xCols <- seq(from = 1,
-                   to = ncol(mat.tmp) - 1,
+                   to = ncol(mat) - 1,
                    by = 2)
       yCols <- seq(from = 2,
-                   to = ncol(mat.tmp),
+                   to = ncol(mat),
                    by = 2)
-      mat[, xCols] <- mat.tmp[, 1:colCount]
-      mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
-      mat <-
-        mat[startFrame:nrow(mat),] #Shift to correct for margo output
-      close(file)
+      mat = mat[,order(c(xCols,yCols))]
+      # mat[, xCols] <- mat.tmp[, 1:colCount]
+      # mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
+      mat =mat[startFrame:nrow(mat),] #Shift to correct for margo output
+
       mat[is.nan(mat)] = 0
+      sort( sapply(ls(),function(x){object.size(get(x))}))
+
       return(as.data.frame(mat))
     }
     else if (dataType == "dropped") {
@@ -331,8 +337,7 @@ readBinary.margo <-
     }
     else if (dataType == "time") {
       time <- readBin(file, numeric(), n = 1e9, size = size.default)
-      time <-
-        time[startFrame:length(time)]
+      time <- time[startFrame:length(time)]
       close(file)
       return(time)
     }

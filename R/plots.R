@@ -351,7 +351,6 @@ plot.flyMv_rollAvg <- function(trak,
     #Assumes sex = logical vector. T == male
     ltys[sex] <- 2
   }
-  
   plot(
     t,
     speed.avg[, 1],
