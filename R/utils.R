@@ -166,7 +166,8 @@ readInfo.margo <-
            hz = 5,
            startFrame = 4,
            inferPhenos = F,
-           size.centroid = NA_integer_) {
+           size.centroid = NA_integer_, 
+           load.weightedcentroid = F) {
     #WARNING: The precision for the centroid data is not consistent across autotracker versions
     #If the centroid coordinates make no sense, try changing size.centroid
     #This is passed on as the size argument to readBin()
@@ -182,9 +183,11 @@ readInfo.margo <-
         readBinary.margo(
           paste0(rawDataFolder, name),
           dataType = assignmentName,
-          colCount = wellCount
+          colCount = wellCount,
+          load.weightedcentroid = load.weightedcentroid,
         )
       )
+      gc() #Garbage collection
     }
     
     if(!is.null(metadataFileName))
@@ -284,10 +287,11 @@ readBinary.margo <-
            dataType = NULL,
            size.centroid = 4,
            size.default = 4,
-           startFrame = 1) {
+           startFrame = 1,
+           load.weightedcentroid) {
     file <- file(fileName, "rb")
     
-    if (dataType == 'centroid' || dataType == "weightedcentroid") {
+    if (dataType == 'centroid' || (dataType == "weightedcentroid" & load.weightedcentroid)) {
       mat.tmp <-
         matrix(
           readBin(file, numeric(), n = 1e9, size = size.centroid),
@@ -318,7 +322,7 @@ readBinary.margo <-
       )))
       close(file)
       mat <-
-        matrix(bits[1:(RoundTo(length(bits), colCount, trunc))], #Round to multiple of well count
+        matrix(bits[1:(DescTools::RoundTo(length(bits), colCount, trunc))], #Round to multiple of well count
                ncol = colCount,
                byrow = TRUE)
       #    mat <- sapply(as.data.frame(mat), as.logical)
