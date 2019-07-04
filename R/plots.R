@@ -1155,21 +1155,53 @@ plot.gxeBoxes <-
   }
 
 
-plot.singleFlyDirectonality <- function(trak, flyNumber,startIndex=5,endIndex=100,colorPalette="Darjeeling2",...) {
-  
-  coords <- trak@centroid[startIndex:endIndex, c(flyNumber * 2 - 1, flyNumber * 2)]
+plot.singleFlyDirectonality <- function(trak, flyNumber, start=5, end=100, timeScale = 's', colorPalette="Darjeeling1", ...) {
+  #Find frames in time window
+  hz = trak@hz
+  if (timeScale %in% c('h', 'hour')) {
+    plotFactor = hz * 60 ^ 2
+  } else if (timeScale %in% c('m', 'min', 'minute')) {
+    plotFactor = hz * 60
+  } else if (timeScale == 'frames') {
+    plotFactor = 1
+  } else if (timeScale %in% c('s', 'sec')) {
+    plotFactor = hz
+  }
+  else
+    stop(paste('Did not recognize timeScale:', timeScale))
+  start <- start * plotFactor
+  end <- end * plotFactor
+
+  #Get coordinates
+  coords <- trak@centroid[start:end, c(flyNumber * 2 - 1, flyNumber * 2)]
   coords[, 2] <- 1 - coords[, 2] #flip y coordinates
-  coords =coords[coords[1]!=0 & coords[2]!=0,]
-  xlim <- range(coords[coords[, 1] > 0, 1])
-  ylim <- range(coords[coords[, 2] < 0, 2])
-  direction <- trak@direction[startIndex:endIndex, flyNumber]
-  ncols <- (length(unique(direction)))
-  pal <- colorRampPalette(wes_palette(colorPalette, n = 2, "discrete"))
-  cols <- pal(ncols)[as.numeric(cut(direction, breaks = ncols))]
+  nonZeroCoords <- coords[1]!=0 & coords[2]!=0 #Skip (x,y) = (0,0) coordinates
+  coords <- coords[nonZeroCoords, ]
+  
+  if(nrow(trak@direction) > 0){
+    #Color by direction
+    direction <- trak@direction[start:end, flyNumber]
+    direction <- direction[nonZeroCoords]
+    ncols <- (length(unique(direction)))
+    pal <- colorRampPalette(wesanderson::wes_palette(colorPalette, n = 2, "discrete"))
+    cols <- pal(ncols)[as.numeric(cut(direction, breaks = ncols))]
+  } 
+  else
+    cols <- 'black'
+  
+  #Plot limits based on the flies movement over the whole experiment. Should get the whole ROI
+  coords.all <- trak@centroid[, c(flyNumber * 2 - 1, flyNumber * 2)]
+  coords.all[, 2] <- 1 - coords.all[, 2]
+  nonZero <- coords.all[, 1] != 0 & coords.all[, 2] != 0
+  xlim <- range(coords.all[nonZero, 1])
+  ylim <- range(coords.all[nonZero, 2])
   
   plot(
     coords,
     col = cols,
+    pch = 19,
+    xlim = xlim,
+    ylim = ylim,
     ...
   )
 }
