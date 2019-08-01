@@ -174,25 +174,30 @@ readInfo.margo <-
     #This is passed on as the size argument to readBin()
     
     files = list.files(rawDataFolder)
-    
-    #Method for finding all files and assigning according to name
-    # Note that we should refine the regex expression
-    for (name in files) {
-      assignmentName = tolower(strsplit(name, "[_.]")[[1]][3])
-      if (assignmentName %in% featuresToIgnore) {
-        assign(assignmentName, data.frame())
-      } else{
+    features <- c('area', 'centroid', 'direction', 'dropped', 'majoraxislength', 'minoraxislength', 'orientation', 'radius', 'speed', 'theta', 'time', 'weightedcentroid')
+    #Load features from the files in rawDataFolder
+    for (name in features) {
+      if (name %in% featuresToIgnore) { #Ignore this feature
+        assign(name, data.frame())
+      }
+      else if(!any(grepl(name, files))){ #Feature is not present in rawDataFolder
+        assign(name, data.frame())
+      }
+      else{ #Read feature
+        fileName <- grep(name, files, value = T)
+        message('Loading: ', fileName)
+        
         assign(
-          assignmentName,
+          name,
           readBinary.margo(
-            paste0(rawDataFolder, name),
-            dataType = assignmentName,
+            paste0(rawDataFolder, fileName),
+            dataType = name,
             colCount = wellCount
           )
         )
       }
     }
-    
+
     if(!is.null(metadataFileName))
       metadata <- readMetadata(metadataFileName, start, end)
     else{
