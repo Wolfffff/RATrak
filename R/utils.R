@@ -180,11 +180,11 @@ readInfo.margo <-
       if (name %in% featuresToIgnore) { #Ignore this feature
         assign(name, data.frame())
       }
-      else if(!any(grepl(name, files))){ #Feature is not present in rawDataFolder
+      else if(!any(grepl(pattern = paste0('.*__', name, '.*'), files, ignore.case = T))){ #Feature is not present in rawDataFolder
         assign(name, data.frame())
       }
       else{ #Read feature
-        fileName <- grep(name, files, value = T)
+        fileName <- grep(pattern = paste0('.*__', name, '.*'), files, value = T, ignore.case = T)
         message('Loading: ', fileName)
         
         assign(
