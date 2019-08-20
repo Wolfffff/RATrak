@@ -46,7 +46,8 @@ flies.activity <-
     }
     else
       stop('trak object does not contain speed data')
-    speed[speed < noiseLevelThreshold] = 0
+    speed[speed < noiseLevelThreshold] = 0 #Set speeds < noiseLevelThreshold to zero
+    
     #Run length encoding of movement > 0, == streaks of movement
     speed.mov <-
       apply(
@@ -201,7 +202,10 @@ flies.activity <-
         mvBouts.mvTime <- rep(NA, length(mvSpacers.idx))
         mvBouts.avgSpeed <- rep(NA, length(mvSpacers.idx))
         
-        start.idx <- 1
+        if(movement$values[1]) #If the first run length is movement, set start idx for first potential mv bout to 1 
+          start.idx <- 1 
+        else #If it's non-movement, set it to 2
+          start.idx <- 2
         k <- 1
         for (j in 1:length(mvSpacers.idx)) {
           #Are there some clever vectorized solution to this?
