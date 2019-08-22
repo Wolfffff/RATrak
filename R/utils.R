@@ -178,10 +178,16 @@ readInfo.margo <-
     #Load features from the files in rawDataFolder
     for (name in features) {
       if (name %in% featuresToIgnore) { #Ignore this feature
-        assign(name, data.frame())
+        if(name == 'time')
+          assign(name, numeric())
+        else
+          assign(name, data.frame())
       }
       else if(!any(grepl(pattern = paste0('.*__', name, '.*'), files, ignore.case = T))){ #Feature is not present in rawDataFolder
-        assign(name, data.frame())
+        if(name == 'time')
+          assign(name, numeric())
+        else
+          assign(name, data.frame())
       }
       else{ #Read feature
         fileName <- grep(pattern = paste0('.*__', name, '.*'), files, value = T, ignore.case = T)
