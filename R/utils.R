@@ -246,7 +246,7 @@ readBinary <-
     if (dataType == 'speed') {
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.speed_time),
+          readBin(file, numeric(), n = 1e10, size = size.speed_time),
           ncol = colCount,
           byrow = TRUE
         )
@@ -259,7 +259,7 @@ readBinary <-
     else if (dataType == 'centroid') {
       mat.tmp <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.centroid),
+          readBin(file, numeric(), n = 1e10, size = size.centroid),
           ncol = colCount * 2,
           byrow = TRUE
         )
@@ -280,7 +280,7 @@ readBinary <-
       return(as.data.frame(mat))
     }
     else if (dataType == 'time') {
-      time <- readBin(file, numeric(), n = 1e9, size = size.speed_time)
+      time <- readBin(file, numeric(), n = 1e10, size = size.speed_time)
       time <-
         time[startFrame:length(time)]
       close(file)
@@ -307,7 +307,7 @@ readBinary.margo <-
     if (dataType == 'centroid' || dataType == "weightedcentroid") {
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.centroid),
+          readBin(file, numeric(), n = 1e10, size = size.centroid),
           ncol = colCount * 2,
           byrow = TRUE
         )
@@ -335,7 +335,7 @@ readBinary.margo <-
       #Be careful of syncing here -- the rounding may cause issues
       # Needs to be fixed
       bits = (rawToBits(readBin(
-        file, raw(), n = 1e9, size = 1
+        file, raw(), n = 1e10, size = 1
       )))
       close(file)
       mat <-
@@ -347,7 +347,7 @@ readBinary.margo <-
       return(as.data.frame(mat))
     }
     else if (dataType == "time") {
-      time <- readBin(file, numeric(), n = 1e9, size = size.default)
+      time <- readBin(file, numeric(), n = 1e10, size = size.default)
       time <- time[startFrame:length(time)]
       close(file)
       return(time)
@@ -355,7 +355,7 @@ readBinary.margo <-
     else{
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.default),
+          readBin(file, numeric(), n = 1e10, size = size.default),
           ncol = colCount,
           byrow = TRUE
         )#Discard first few frames if needed
