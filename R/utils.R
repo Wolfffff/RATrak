@@ -61,7 +61,7 @@ readInfo <-
     time <- numeric()
     centroid <- data.frame()
     speed <- data.frame()
-    
+
     if (!is.null(centroidBinFileName) &
         !is.null(timeBinFileName) & !is.null(speedBinFileName)) {
       speed <- readBinary(speedBinFileName, wellCount, dataType = 'speed')
@@ -121,11 +121,11 @@ readInfo <-
                    size.centroid = size.centroid)
       speed <-
         flies.calculateSpeed(as.matrix(centroid)) * hz #Rescale speed to pixel/s
-      
+
     }
     else
       stop('Neither speed, centroid, or time data was provided')
-    
+
     metadata <- readMetadata(metadataFileName, start, end)
     data <-
       .trak(
@@ -172,7 +172,7 @@ readInfo.margo <-
     #WARNING: The precision for the centroid data is not consistent across autotracker versions
     #If the centroid coordinates make no sense, try changing size.centroid
     #This is passed on as the size argument to readBin()
-    
+
     files = list.files(rawDataFolder)
     features <- c('area', 'centroid', 'direction', 'dropped', 'majoraxislength', 'minoraxislength', 'orientation', 'radius', 'speed', 'theta', 'time', 'weightedcentroid')
     #Load features from the files in rawDataFolder
@@ -186,7 +186,7 @@ readInfo.margo <-
       else{ #Read feature
         fileName <- grep(pattern = paste0('.*__', name, '.*'), files, value = T, ignore.case = T)
         message('Loading: ', fileName)
-        
+
         assign(
           name,
           readBinary.margo(
@@ -204,7 +204,7 @@ readInfo.margo <-
       metadata <- data.frame()
       warning('No metadata provided')
     }
-    
+
     data <-
       .trak(
         area = area,
@@ -240,7 +240,7 @@ readBinary <-
     if (dataType == 'speed') {
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.speed_time),
+          readBin(file, numeric(), n = 1e10, size = size.speed_time),
           ncol = colCount,
           byrow = TRUE
         )
@@ -253,7 +253,7 @@ readBinary <-
     else if (dataType == 'centroid') {
       mat.tmp <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.centroid),
+          readBin(file, numeric(), n = 1e10, size = size.centroid),
           ncol = colCount * 2,
           byrow = TRUE
         )
@@ -274,7 +274,7 @@ readBinary <-
       return(as.data.frame(mat))
     }
     else if (dataType == 'time') {
-      time <- readBin(file, numeric(), n = 1e9, size = size.speed_time)
+      time <- readBin(file, numeric(), n = 1e10, size = size.speed_time)
       time <-
         time[startFrame:length(time)]
       close(file)
@@ -297,16 +297,16 @@ readBinary.margo <-
            size.default = 4,
            startFrame = 1) {
     file <- file(fileName, "rb")
-    
+
     if (dataType == 'centroid' || dataType == "weightedcentroid") {
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.centroid),
+          readBin(file, numeric(), n = 1e10, size = size.centroid),
           ncol = colCount * 2,
           byrow = TRUE
         )
       close(file)
-      
+
       #Note memory issue here because of mat and mat.tmp being available together
       #Reshape matrix
       xCols <- seq(from = 1,
@@ -329,7 +329,7 @@ readBinary.margo <-
       #Be careful of syncing here -- the rounding may cause issues
       # Needs to be fixed
       bits = (rawToBits(readBin(
-        file, raw(), n = 1e9, size = 1
+        file, raw(), n = 1e10, size = 1
       )))
       close(file)
       mat <-
@@ -341,7 +341,7 @@ readBinary.margo <-
       return(as.data.frame(mat))
     }
     else if (dataType == "time") {
-      time <- readBin(file, numeric(), n = 1e9, size = size.default)
+      time <- readBin(file, numeric(), n = 1e10, size = size.default)
       time <- time[startFrame:length(time)]
       close(file)
       return(time)
@@ -349,7 +349,7 @@ readBinary.margo <-
     else{
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.default),
+          readBin(file, numeric(), n = 1e10, size = size.default),
           ncol = colCount,
           byrow = TRUE
         )#Discard first few frames if needed
@@ -372,7 +372,7 @@ readMetadata <- function(fileName, start = 1, end) {
   else
     stop(paste('Could not determine field separator in', fileName))
   colnames(meta) = tolower(colnames(meta))
-  
+
   data = meta[start:end, ]
   return(data)
 }
