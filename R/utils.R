@@ -307,7 +307,7 @@ readBinary.margo <-
     if (dataType == 'centroid' || dataType == "weightedcentroid") {
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e10, size = size.centroid),
+          readBin(file, numeric(), n = 1e9, size = size.centroid),
           ncol = colCount * 2,
           byrow = TRUE
         )
@@ -347,7 +347,7 @@ readBinary.margo <-
       return(as.data.frame(mat))
     }
     else if (dataType == "time") {
-      time <- readBin(file, numeric(), n = 1e10, size = size.default)
+      time <- readBin(file, numeric(), n = 1e9, size = size.default)
       time <- time[startFrame:length(time)]
       close(file)
       return(time)
@@ -355,7 +355,7 @@ readBinary.margo <-
     else{
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e10, size = size.default),
+          readBin(file, numeric(), n = 1e9, size = size.default),
           ncol = colCount,
           byrow = TRUE
         )#Discard first few frames if needed
