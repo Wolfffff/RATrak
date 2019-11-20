@@ -94,8 +94,7 @@ flies.activity <-
             FUN = function(x) {
               if (sum(movement$lengths[1:sleepIndexes[x]]) != sum(movement$lengths)) {
                 from <- sum(movement$lengths[1:sleepIndexes[x]])
-                to <-
-                  sum(movement$lengths[1:(sleepIndexes[x + 1] - 1)])
+                to <- sum(movement$lengths[1:(sleepIndexes[x + 1] - 1)])
                 return(sum(speed[from:to, i], na.rm = T) > erroneousSleepDataThreshold)
               }
             }
@@ -105,8 +104,7 @@ flies.activity <-
               if (!sleepQC[s]) {
                 #If the movement after the sleep bout < erroneousSleepDataThreshold, merge the sleep bouts
                 #Merge bouts
-                movement$lengths[sleepIndexes[s]] = sum(movement$lengths[sleepIndexes[s]:sleepIndexes[s +
-                                                                                                        1]])
+                movement$lengths[sleepIndexes[s]] = sum(movement$lengths[sleepIndexes[s]:sleepIndexes[s + 1]])
                 rmIndexes <-
                   (sleepIndexes[s] + 1):sleepIndexes[s + 1]
                 movement$lengths = movement$lengths[-rmIndexes]
@@ -129,17 +127,20 @@ flies.activity <-
         if (movement$lengths[lastNoMov] > deadMin &
             all(!movement$values[lastNoMov:length(sleep)])) {
           #If the last recorded no movement bout is > deadMin AND no movement after that point
-          dead <-
-            sum(movement$lengths[1:(lastNoMov - 1)]) #Call dead at the start of the last no movement bout
+          dead <- sum(movement$lengths[1:(lastNoMov - 1)]) #Call dead at the start of the last no movement bout
           
           #Call sleep for the previous no movement bouts
           if (sleepIndexes[1] == 1) {
             #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
-            sleepStartTimes <-
-              sapply(sleepIndexes[2:(length(sleepIndexes) - 1)], function(x) {
-                sum(movement$lengths[1:(x - 1)])
-              }) #Sum of every run length up to the movement start == movement start frame
-            sleepStartTimes <- c(1, sleepStartTimes)
+            if(length(sleepIndexes) > 2){
+              sleepStartTimes <-
+                sapply(2:(length(sleepIndexes) - 1), function(x) {
+                  sum(movement$lengths[1:(x - 1)])
+                }) #Sum of every run length up to the movement start == movement start frame
+              sleepStartTimes <- c(1, sleepStartTimes)
+            }
+            else
+              sleepStartTimes <- 1
           }
           else{
             sleepStartTimes <-
@@ -148,8 +149,7 @@ flies.activity <-
               }) #Sum of every run length up to the sleep start == sleep start frame
           }
           
-          sleepLengths <-
-            movement$lengths[sleepIndexes[1:(length(sleepIndexes) - 1)]] #sleep lengths
+          sleepLengths <- movement$lengths[sleepIndexes[1:(length(sleepIndexes) - 1)]] #sleep lengths
           sleepNr <- length(sleepIndexes) - 1
         }
         else{
