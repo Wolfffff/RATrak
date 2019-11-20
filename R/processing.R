@@ -473,7 +473,8 @@ flies.extractTimeWindow <-
       trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples),]
     if (returnRawData) {
       for (name in features[!(features == "time" & features != "centroid" )]) {
-        slot(trak,name) = slot(trak,name)[start:end,!((1:ncol(slot(trak,name))) %in% removeSamples)]
+        if(nrow(slot(trak,name)) > 0)
+          slot(trak,name) = slot(trak,name)[start:end,!((1:ncol(slot(trak,name))) %in% removeSamples)]
       }
       trak@time= trak@time[start:end]
       
