@@ -716,7 +716,7 @@ flies.extractMvBouts <- function(trak, boutLength, boutLength.w = 1, flies = NUL
         #Center & Rotate every bout
         
       }
-      mvBouts[,j] <- xy
+      mvBouts[,j] <- c(xy[,1], xy[,2])
     }
     flies.mvBouts[[j]] <- mvBouts
   }
