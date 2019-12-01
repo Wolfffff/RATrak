@@ -667,3 +667,58 @@ flies.extractActivity <- function(trak) {
     stop('Inconsistent number of samples in activity data')
   }
 }
+
+flies.extractMvBouts <- function(trak, boutLength, boutLength.w = 1, flies = NULL, makeEgocentric = T, timeScale = 's'){
+  if(nrow(trak@centroid) == 0)
+    stop('trak object must contain centroid data')
+  if(length(trak@activity) == 0)
+    stop('trak object must contain phenotypes in the activity slot')
+  if(is.null(flies))
+    flies <- 1:length(trak@activity)
+  
+  #Set time scale
+  if (timeScale %in% c('h', 'hour')) {
+    timeFactor = trak@hz * 60 ^ 2
+  } else if (timeScale %in% c('m', 'min', 'minute')) {
+    timeFactor = trak@hz * 60
+  } else if (timeScale == 'frames') {
+    timeFactor = 1
+  } else if (timeScale %in% c('s', 'sec')) {
+    timeFactor = trak@hz
+  } else{
+    stop(paste('Did not recognize timeScale:', timeScale))
+  }
+  boutLength.w <- timeFactor*boutLength.w #Get bouts with length boutLength +- boutLength.w
+  boutLength <- timeFactor*boutLength
+  bouts.maxLength <- boutLength + 2*boutLength.w #time windows of this size, starting at inferred start time, will be extracted from trak@centroid
+  
+  flies.mvBouts <- list()
+  for (i in flies) {
+    allBouts.lengths <- trak@activity$result[[i]]$mvBouts.lengths
+    
+    #Identify bouts with length boutLength +- boutLength.w
+    bouts.idx <- which(allBouts.lengths > boutLength - boutLength.w 
+                       & allBouts.lengths < boutLength + boutLength.w)
+    
+    #Starts and lenghts
+    bouts.starts <- trak@activity$result[[i]]$mvBouts.startTimes[bouts.idx]
+    bouts.lenghts <- trak@activity$result[[i]]$mvBouts.lengths[bouts.idx]
+    
+    #Get centroid data for bouts. There are probably some more efficient way to do this rather than looping, maybe using reshape for instance
+    bouts.centroidIdx <- sapply(bouts.starts, function(x){x:(x + bouts.maxLength)}) #Gives a matrix with one column per bout, with the indices of that bout in trak@centroid
+    mvBouts <- data.frame(matrix(nrow = 2 * nrow(bouts.centroidIdx), ncol = ncol(bouts.centroidIdx))) #To store bouts
+    colnames(mvBouts) <- paste0('fly', i, '_', bouts.starts, '_', bouts.starts + bouts.lenghts) #Naming every bout by fly number and bout start_end, where end is the one inferred by flies.activity, rather than the window extracted here
+    for (j in 1:length(bouts.idx)) { 
+      xy <- trak@centroid[bouts.centroidIdx[,j], c(i * 2 - 1, i * 2)]
+      if(makeEgocentric){
+        #Get orientation
+        
+        #Center & Rotate every bout
+        
+      }
+      mvBouts[,j] <- xy
+    }
+    flies.mvBouts[[j]] <- mvBouts
+  }
+}
+
