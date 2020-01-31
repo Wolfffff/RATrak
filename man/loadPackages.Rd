@@ -17,4 +17,5 @@ loadPackages(names)
 
 \examples{
 loadPackages(c("data.table", "zoo", "matrixStats", "ggplot2", "tidyverse"))
+}
 
