@@ -1155,7 +1155,7 @@ plot.gxeBoxes <-
   }
 
 
-plot.singleFlyDirectonality <- function(trak, flyNumber, start=5, end=100, timeScale = 's', colorPalette="Darjeeling1", ...) {
+plot.singleFlyDirectionality <- function(trak, flyNumber, start=5, end=100, timeScale = 's', colorPalette="Darjeeling1", ...) {
   #Find frames in time window
   hz = trak@hz
   if (timeScale %in% c('h', 'hour')) {

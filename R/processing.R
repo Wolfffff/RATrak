@@ -673,8 +673,11 @@ flies.extractMvBouts <- function(trak, boutLength, boutLength.w = 1, flies = NUL
     stop('trak object must contain centroid data')
   if(length(trak@activity) == 0)
     stop('trak object must contain phenotypes in the activity slot')
-  if(is.null(flies))
-    flies <- 1:length(trak@activity)
+  if(is.null(flies)){
+    flies <- 1:length(trak@metadata$well_orderastracked)
+    print(flies)
+  }
+  
   
   #Set time scale
   if (timeScale %in% c('h', 'hour')) {
@@ -690,7 +693,7 @@ flies.extractMvBouts <- function(trak, boutLength, boutLength.w = 1, flies = NUL
   }
   boutLength.w <- timeFactor*boutLength.w #Get bouts with length boutLength +- boutLength.w
   boutLength <- timeFactor*boutLength
-  bouts.maxLength <- boutLength + 2*boutLength.w #time windows of this size, starting at inferred start time, will be extracted from trak@centroid
+  bouts.maxLength <- boutLength + boutLength.w #time windows of this size, starting at inferred start time, will be extracted from trak@centroid
   
   flies.mvBouts <- list()
   for (i in flies) {
@@ -702,23 +705,52 @@ flies.extractMvBouts <- function(trak, boutLength, boutLength.w = 1, flies = NUL
     
     #Starts and lenghts
     bouts.starts <- trak@activity$result[[i]]$mvBouts.startTimes[bouts.idx]
-    bouts.lenghts <- trak@activity$result[[i]]$mvBouts.lengths[bouts.idx]
+    bouts.lengths <- trak@activity$result[[i]]$mvBouts.lengths[bouts.idx]
+    print(i)
+    
+    #Check to see if fly has any usable bouts
+    if (length(bouts.starts) == 0) {
+      #print(paste0("skipping ", i))
+      flies.mvBouts[[i]] <- NA
+      next
+    }
     
     #Get centroid data for bouts. There are probably some more efficient way to do this rather than looping, maybe using reshape for instance
-    bouts.centroidIdx <- sapply(bouts.starts, function(x){x:(x + bouts.maxLength)}) #Gives a matrix with one column per bout, with the indices of that bout in trak@centroid
+    bouts.centroidIdx <- sapply(bouts.starts, function(x){x:(x + bouts.maxLength)}) #Gives a matrix with one column per bout, with the indices of that bout in trak@centroid note that this creates a static length later on.
     mvBouts <- data.frame(matrix(nrow = 2 * nrow(bouts.centroidIdx), ncol = ncol(bouts.centroidIdx))) #To store bouts
-    colnames(mvBouts) <- paste0('fly', i, '_', bouts.starts, '_', bouts.starts + bouts.lenghts) #Naming every bout by fly number and bout start_end, where end is the one inferred by flies.activity, rather than the window extracted here
+    colnames(mvBouts) <- paste0('fly', i, '_', bouts.starts, '_', bouts.starts + bouts.lengths) #Naming every bout by fly number and bout start_end, where end is the one inferred by flies.activity, rather than the window extracted here
     for (j in 1:length(bouts.idx)) { 
       xy <- trak@centroid[bouts.centroidIdx[,j], c(i * 2 - 1, i * 2)]
+      #print(dim(xy))
       if(makeEgocentric){
-        #Get orientation
-        
         #Center & Rotate every bout
+        #If I'm interpreting this code correctly, this is simply the start time of the bout
+        #print(paste0("Bout Start Time: ", bouts.centroidIdx[1,j]))
+        
+        #https://github.com/de-Bivort-Lab/margo/wiki/Options-and-Parameters -- see entry on heading
+        #This is getting the starting direction in rads for a given bout -- it may need adjustment as it the first 
+        orientation <- trak@direction[bouts.centroidIdx[1,j],i]
+        
+        rotationMatrix <- matrix(c(cos(orientation),-sin(orientation),sin(orientation),cos(orientation)),nrow = 2,ncol = 2,byrow=TRUE)
+        center <- trak@centroid[bouts.centroidIdx[1,j], c(i * 2 - 1, i * 2)]
+        centeredxy <- t(apply(as.matrix(xy), 1, '-', t(center)))
+        
+        #Rotation
+        xy <- t(apply(centeredxy, 1, function(x,rotationMatrix) {rotationMatrix %*% x},rotationMatrix=rotationMatrix))
+        
+        # print("INFO")
+        # print(orientation)
+        # print(xy[1:5,1:2])
+        # print(centeredxy[1:5,1:2])
+        # print(rotatedcenteredxy[1:5,1:2])
         
       }
       mvBouts[,j] <- c(xy[,1], xy[,2])
     }
-    flies.mvBouts[[j]] <- mvBouts
+    
+    #Export
+    flies.mvBouts[[i]] <- mvBouts
   }
+  return(flies.mvBouts)
 }
 
