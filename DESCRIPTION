@@ -12,3 +12,4 @@ Imports: data.table, zoo, matrixStats, ggplot2, tidyverse, wesanderson, DescTool
 Encoding: UTF-8
 URL: https://wolfffff.github.io/RATrak/
 BugReports: https://github.com/Wolfffff/RATrak/issues
+RoxygenNote: 7.1.0
