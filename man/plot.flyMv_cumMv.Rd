@@ -31,7 +31,3 @@ Vector of treatment levels for given data set
 \item{sampling}{
 Gives sample size to to plot
 }
-
-\see also{
-See also \code{\link{plot.flyMv_allFigs}}
-}

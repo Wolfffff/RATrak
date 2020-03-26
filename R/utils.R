@@ -307,7 +307,7 @@ readBinary.margo <-
     if (dataType == 'centroid' || dataType == "weightedcentroid") {
       mat <-
         matrix(
-          readBin(file, numeric(), n = 1e9, size = size.centroid),
+          readBin(file, numeric(), n = 1e10, size = size.centroid),
           ncol = colCount * 2,
           byrow = TRUE
         )
