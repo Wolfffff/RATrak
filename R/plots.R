@@ -24,19 +24,19 @@ plot.flyMv_mvNr <-
     treatments <- as.factor(treatments)
     activity_treatments <- split(activity, treatments)
     avgMvNr <- list()
-    for (i in 1:length(activity_treatments)){
+    for (i in 1:length(activity_treatments)) {
       avgMvNr[[i]] <-
-      sapply(
-        activity_treatments[[i]],
-        FUN = function(x) {
-          x$mvBouts.nr
-        }
-      )
+        sapply(
+          activity_treatments[[i]],
+          FUN = function(x) {
+            x$mvBouts.nr
+          }
+        )
     }
     
     if (!all(is.na(avgMvNr[[1]]))) {
-    treatmentLevels <- paste('group', levels(treatments))
-    
+      treatmentLevels <- paste('group', levels(treatments))
+      
       box <-
         boxplot(
           avgMvNr,
@@ -102,7 +102,7 @@ plot.flyMv_allFigs <- function(trak,
   png(filename = file,
       width = 1200,
       height = 800)
-  plot.flyMv_cumMv(trak,time=time, treatmentLevels = treatmentLevels)
+  plot.flyMv_cumMv(trak, time = time, treatmentLevels = treatmentLevels)
   dev.off()
   
   #Survival
@@ -202,7 +202,7 @@ plot.flyMv_cumMv <-
       stop('time needs to be \'min\' or \'h\'')
     }
     speed.cumDist <-
-      apply(speed[start:end, ], MARGIN = 2, FUN = cumsum)
+      apply(speed[start:end,], MARGIN = 2, FUN = cumsum)
     sample <-
       seq.int(from = 1,
               to = nrow(speed.cumDist),
@@ -1155,66 +1155,241 @@ plot.gxeBoxes <-
   }
 
 
-plot.singleFlyDirectionality <- function(trak, flyNumber, start=5, end=100, timeScale = 's', colorPalette="Darjeeling1", ...) {
-  #Find frames in time window
-  hz = trak@hz
-  if (timeScale %in% c('h', 'hour')) {
-    plotFactor = hz * 60 ^ 2
-  } else if (timeScale %in% c('m', 'min', 'minute')) {
-    plotFactor = hz * 60
-  } else if (timeScale == 'frames') {
-    plotFactor = 1
-  } else if (timeScale %in% c('s', 'sec')) {
-    plotFactor = hz
+plot.singleFlyDirectionality <-
+  function(trak,
+           flyNumber,
+           start = 5,
+           end = 100,
+           timeScale = 's',
+           colorPalette = "Darjeeling1",
+           ...) {
+    #Find frames in time window
+    hz = trak@hz
+    if (timeScale %in% c('h', 'hour')) {
+      plotFactor = hz * 60 ^ 2
+    } else if (timeScale %in% c('m', 'min', 'minute')) {
+      plotFactor = hz * 60
+    } else if (timeScale == 'frames') {
+      plotFactor = 1
+    } else if (timeScale %in% c('s', 'sec')) {
+      plotFactor = hz
+    }
+    else
+      stop(paste('Did not recognize timeScale:', timeScale))
+    start <- start * plotFactor
+    end <- end * plotFactor
+    
+    #Get coordinates
+    coords <-
+      trak@centroid[start:end, c(flyNumber * 2 - 1, flyNumber * 2)]
+    coords[, 2] <- 1 - coords[, 2] #flip y coordinates
+    nonZeroCoords <-
+      coords[1] != 0 & coords[2] != 0 #Skip (x,y) = (0,0) coordinates
+    coords <- coords[nonZeroCoords,]
+    
+    if (nrow(trak@direction) > 0) {
+      #Color by direction
+      direction <- trak@direction[start:end, flyNumber]
+      direction <- direction[nonZeroCoords]
+      ncols <- (length(unique(direction)))
+      pal <-
+        colorRampPalette(wesanderson::wes_palette(colorPalette, n = 2, "discrete"))
+      cols <- pal(ncols)[as.numeric(cut(direction, breaks = ncols))]
+    }
+    else
+      cols <- 'black'
+    
+    #Plot limits based on the flies movement over the whole experiment. Should get the whole ROI
+    coords.all <- trak@centroid[, c(flyNumber * 2 - 1, flyNumber * 2)]
+    coords.all[, 2] <- 1 - coords.all[, 2]
+    nonZero <- coords.all[, 1] != 0 & coords.all[, 2] != 0
+    xlim <- range(coords.all[nonZero, 1])
+    ylim <- range(coords.all[nonZero, 2])
+    
+    plot(
+      coords,
+      col = cols,
+      pch = 19,
+      xlim = xlim,
+      ylim = ylim,
+      ...
+    )
   }
-  else
-    stop(paste('Did not recognize timeScale:', timeScale))
-  start <- start * plotFactor
-  end <- end * plotFactor
 
-  #Get coordinates
-  coords <- trak@centroid[start:end, c(flyNumber * 2 - 1, flyNumber * 2)]
-  coords[, 2] <- 1 - coords[, 2] #flip y coordinates
-  nonZeroCoords <- coords[1]!=0 & coords[2]!=0 #Skip (x,y) = (0,0) coordinates
-  coords <- coords[nonZeroCoords, ]
-  
-  if(nrow(trak@direction) > 0){
-    #Color by direction
-    direction <- trak@direction[start:end, flyNumber]
-    direction <- direction[nonZeroCoords]
-    ncols <- (length(unique(direction)))
-    pal <- colorRampPalette(wesanderson::wes_palette(colorPalette, n = 2, "discrete"))
-    cols <- pal(ncols)[as.numeric(cut(direction, breaks = ncols))]
-  } 
-  else
-    cols <- 'black'
-  
-  #Plot limits based on the flies movement over the whole experiment. Should get the whole ROI
-  coords.all <- trak@centroid[, c(flyNumber * 2 - 1, flyNumber * 2)]
-  coords.all[, 2] <- 1 - coords.all[, 2]
-  nonZero <- coords.all[, 1] != 0 & coords.all[, 2] != 0
-  xlim <- range(coords.all[nonZero, 1])
-  ylim <- range(coords.all[nonZero, 2])
-  
-  plot(
-    coords,
-    col = cols,
-    pch = 19,
-    xlim = xlim,
-    ylim = ylim,
-    ...
-  )
-}
+plot.singleFlyDensity <-
+  function(trak,
+           flyNumber,
+           startIndex = 5,
+           endIndex = 1000,
+           bins = 10,
+           wesAndersonPalette = "BottleRocket2") {
+    coords <-
+      trak@centroid[startIndex:endIndex, c(flyNumber * 2 - 1, flyNumber * 2)]
+    coords[, 2] <- 1 - coords[, 2] #flip y coordinates
+    coords = coords[coords[1] != 0 & coords[2] != 0, ]
+    cols = wes_palette(colorPalette, 2, "continuous")
+    ggplot(coords, mapping = aes_string(x = names(coords)[1], y = names(coords)[2])) +
+      geom_hex(bins = 20) +
+      scale_fill_gradientn(colors = cols) +
+      ggtitle("Hexbin") +
+      xlab("X") + ylab("Y")
+  }
 
-plot.singleFlyDensity <- function(trak, flyNumber,startIndex=5,endIndex=1000, bins = 10, wesAndersonPalette = "BottleRocket2") {
-  
-  coords <- trak@centroid[startIndex:endIndex, c(flyNumber * 2 - 1, flyNumber * 2)]
-  coords[, 2] <- 1 - coords[, 2] #flip y coordinates
-  coords =coords[coords[1]!=0 & coords[2]!=0,]
-  cols = wes_palette(colorPalette,2,"continuous")
-  ggplot(coords, mapping = aes_string(x = names(coords)[1], y = names(coords)[2])) +
-    geom_hex(bins = 20) +
-    scale_fill_gradientn(colors=cols) +
-    ggtitle("Hexbin") +
-    xlab("X") + ylab("Y")
-}
+plot.egocentric <-
+  function (trak,
+            extractedBouts,
+            flyNumber,
+            boutNumber,
+            start = 1,
+            end = 10,
+            timeScale = "frames",
+            ...)
+  {
+    hz = trak@hz
+    if (timeScale %in% c("h", "hour")) {
+      plotFactor = hz * 60 ^ 2
+    }
+    else if (timeScale %in% c("m", "min", "minute")) {
+      plotFactor = hz * 60
+    }
+    else if (timeScale == "frames") {
+      plotFactor = 1
+    }
+    else if (timeScale %in% c("s", "sec")) {
+      plotFactor = hz
+    }
+    else
+      stop(paste("Did not recognize timeScale:", timeScale))
+    start <- start * plotFactor
+    end <- end * plotFactor
+    
+    
+    startend <-
+      as.numeric(strsplit(colnames(extractedBouts[[flyNumber]][boutNumber]), "_")[[1]][c(2, 3)])
+    start_true = startend[1]
+    end_true = startend[2]
+    boutLen = length(extractedBouts[[flyNumber]][boutNumber][, 1]) / 2
+    egocentricx =  extractedBouts[[flyNumber]][boutNumber][1:boutLen, 1]
+    egocentricy = extractedBouts[[flyNumber]][boutNumber][boutLen + 1:(2 *
+                                                                         boutLen), 1]
+    
+    
+    orientation <-
+      trak@orientation[start_true:(start_true + boutLen - 1), flyNumber]
+    df <-
+      data.frame(x = egocentricx[start:end],
+                 y = egocentricy[start:end],
+                 orientation = orientation[start:end])
+    ggplot(df, mapping = aes(x, y, col = orientation)) +
+      geom_point() + ylim(c(-100, 100)) + xlim(c(-100, 100)) +
+      theme(aspect.ratio = 1)
+  }
+
+plot.singleFlyDirectionality_ggplot <-
+  function (trak,
+            flyNumber,
+            start = 5,
+            end = 100,
+            timeScale = "s",
+            ...)
+  {
+    hz = trak@hz
+    if (timeScale %in% c("h", "hour")) {
+      plotFactor = hz * 60 ^ 2
+    }
+    else if (timeScale %in% c("m", "min", "minute")) {
+      plotFactor = hz * 60
+    }
+    else if (timeScale == "frames") {
+      plotFactor = 1
+    }
+    else if (timeScale %in% c("s", "sec")) {
+      plotFactor = hz
+    }
+    else
+      stop(paste("Did not recognize timeScale:", timeScale))
+    start <- start * plotFactor
+    end <- end * plotFactor
+    coords <-
+      trak@centroid[start:end, c(flyNumber * 2 - 1, flyNumber *
+                                   2)]
+    coords[, 2] <- -coords[, 2]
+    nonZeroCoords <- coords[1] != 0 & coords[2] != 0
+    coords <- coords[nonZeroCoords,]
+    coords.all <- trak@centroid[, c(flyNumber * 2 - 1, flyNumber *
+                                      2)]
+    coords.all[, 2] <-  -coords.all[, 2]
+    nonZero <- coords.all[, 1] != 0 & coords.all[, 2] != 0
+    xlim <- range(coords.all[nonZero, 1])
+    ylim <- range(coords.all[nonZero, 2])
+    
+    if (nrow(trak@direction) > 0) {
+      direction <- trak@direction[start:end, flyNumber]
+      df <-
+        data.frame(x = coords[, 1],
+                   y = coords[, 2],
+                   direction = direction)
+      ggplot(df, mapping = aes(x, y, col = direction)) +
+        geom_point() + ylim(ylim) + xlim(xlim)
+    }
+    else{
+      df <- data.frame(x = coords[, 1], y = coords[, 2])
+      ggplot(df, mapping = aes(x, y)) +
+        geom_point() + ylim(ylim) + xlim(xlim)
+    }
+  }
+
+plot.singleFlyOrientation_ggplot <-
+  function (trak,
+            flyNumber,
+            start = 5,
+            end = 100,
+            timeScale = "s",
+            ...)
+  {
+    hz = trak@hz
+    if (timeScale %in% c("h", "hour")) {
+      plotFactor = hz * 60 ^ 2
+    }
+    else if (timeScale %in% c("m", "min", "minute")) {
+      plotFactor = hz * 60
+    }
+    else if (timeScale == "frames") {
+      plotFactor = 1
+    }
+    else if (timeScale %in% c("s", "sec")) {
+      plotFactor = hz
+    }
+    else
+      stop(paste("Did not recognize timeScale:", timeScale))
+    start <- start * plotFactor
+    end <- end * plotFactor
+    coords <-
+      trak@centroid[start:end, c(flyNumber * 2 - 1, flyNumber *
+                                   2)]
+    coords[, 2] <- -coords[, 2]
+    nonZeroCoords <- coords[1] != 0 & coords[2] != 0
+    coords <- coords[nonZeroCoords,]
+    coords.all <- trak@centroid[, c(flyNumber * 2 - 1, flyNumber *
+                                      2)]
+    coords.all[, 2] <- -coords.all[, 2]
+    nonZero <- coords.all[, 1] != 0 & coords.all[, 2] != 0
+    xlim <- range(coords.all[nonZero, 1])
+    ylim <- range(coords.all[nonZero, 2])
+    
+    if (nrow(trak@orientation) > 0) {
+      orientation <- trak@orientation[start:end, flyNumber]
+      orientation <- orientation[nonZeroCoords]
+      df <-
+        data.frame(x = coords[, 1],
+                   y = coords[, 2],
+                   orientation = orientation)
+      ggplot(df, mapping = aes(x, y, col = orientation)) +
+        geom_point() + ylim(ylim) + xlim(xlim)
+    }
+    else{
+      df <- data.frame(x = coords[, 1], y = coords[, 2])
+      ggplot(df, mapping = aes(x, y)) +
+        geom_point() + ylim(ylim) + xlim(xlim)
+    }
+  }

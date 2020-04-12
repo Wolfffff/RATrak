@@ -27,7 +27,7 @@ flies.activity <-
     #errorThreshold = threshold after which later movement is logged as warning. Default = 3h
     #erroneous(Sleep/Movement)DataThreshold = cutoff for condensing sleep bouts, if the next bout contains less than (erroneousDataThreshold) of (Movement/Sleep) frames, it is assumed to be erroneous data and processed as part of the prior bout. Default = 5
     #noiseLevelThreshold = cutoff to be considered to movement( if movement < noiseLevelThreshold, we assume movement = 0). Default 1
-
+    
     
     sleepMin <- sleepThreshold * trak@hz
     deadMin <- deathThreshold * trak@hz
@@ -94,7 +94,8 @@ flies.activity <-
             FUN = function(x) {
               if (sum(movement$lengths[1:sleepIndexes[x]]) != sum(movement$lengths)) {
                 from <- sum(movement$lengths[1:sleepIndexes[x]])
-                to <- sum(movement$lengths[1:(sleepIndexes[x + 1] - 1)])
+                to <-
+                  sum(movement$lengths[1:(sleepIndexes[x + 1] - 1)])
                 return(sum(speed[from:to, i], na.rm = T) > erroneousSleepDataThreshold)
               }
             }
@@ -127,12 +128,13 @@ flies.activity <-
         if (movement$lengths[lastNoMov] > deadMin &
             all(!movement$values[lastNoMov:length(sleep)])) {
           #If the last recorded no movement bout is > deadMin AND no movement after that point
-          dead <- sum(movement$lengths[1:(lastNoMov - 1)]) #Call dead at the start of the last no movement bout
+          dead <-
+            sum(movement$lengths[1:(lastNoMov - 1)]) #Call dead at the start of the last no movement bout
           
           #Call sleep for the previous no movement bouts
           if (sleepIndexes[1] == 1) {
             #If the first bout starts at timepoint 1, some tweaking is needed to get the indexing of the rle right
-            if(length(sleepIndexes) > 2){
+            if (length(sleepIndexes) > 2) {
               sleepStartTimes <-
                 sapply(2:(length(sleepIndexes) - 1), function(x) {
                   sum(movement$lengths[1:(x - 1)])
@@ -149,7 +151,8 @@ flies.activity <-
               }) #Sum of every run length up to the sleep start == sleep start frame
           }
           
-          sleepLengths <- movement$lengths[sleepIndexes[1:(length(sleepIndexes) - 1)]] #sleep lengths
+          sleepLengths <-
+            movement$lengths[sleepIndexes[1:(length(sleepIndexes) - 1)]] #sleep lengths
           sleepNr <- length(sleepIndexes) - 1
         }
         else{
@@ -202,9 +205,11 @@ flies.activity <-
         mvBouts.mvTime <- rep(NA, length(mvSpacers.idx))
         mvBouts.avgSpeed <- rep(NA, length(mvSpacers.idx))
         
-        if(movement$values[1]) #If the first run length is movement, set start idx for first potential mv bout to 1 
-          start.idx <- 1 
-        else #If it's non-movement, set it to 2
+        if (movement$values[1])
+          #If the first run length is movement, set start idx for first potential mv bout to 1
+          start.idx <- 1
+        else
+          #If it's non-movement, set it to 2
           start.idx <- 2
         k <- 1
         for (j in 1:length(mvSpacers.idx)) {
@@ -299,8 +304,13 @@ flies.activity <-
   }
 
 
-flies.activityByGroup <- function(trak, groups = NA,
-                                  metricsToAvg = c("sleepNr","sleepLengths","mvBouts.lengths","mvBouts.mvTime","mvBouts.avgSpeed")) {
+flies.activityByGroup <- function(trak,
+                                  groups = NA,
+                                  metricsToAvg = c("sleepNr",
+                                                   "sleepLengths",
+                                                   "mvBouts.lengths",
+                                                   "mvBouts.mvTime",
+                                                   "mvBouts.avgSpeed")) {
   if (is.na(groups)) {
     stop("You must provide features to groups(list of indices).")
   }
@@ -317,14 +327,14 @@ flies.activityByGroup <- function(trak, groups = NA,
 
 
 flies.avgFeaturesByGroup <- function(trak,
-                             featuresToGroup = NA,
-                             groupBy = NA) {
+                                     featuresToGroup = NA,
+                                     groupBy = NA) {
   if (is.na(groupBy) || is.na(groupBy)) {
     stop("You must provide features to group and identifiers to group by.")
   }
   
   output = .trak(time = trak@time,
-               hz = trak@hz)
+                 hz = trak@hz)
   # Assign to appropriate variables -- works around assign and get problem
   for (feature in featuresToGroup) {
     assign(feature, slot(trak, feature))
@@ -343,15 +353,15 @@ flies.avgFeaturesByGroup <- function(trak,
     tmp = get(f)
     for (row in 1:nrow(combin)) {
       indexes = which(apply(trak@metadata[groupBy], 1, function(x)
-        all(x == combin[row,])))
-        tmpMeans = rowMeans(as.matrix(tmp[, indexes]))
+        all(x == combin[row, ])))
+      tmpMeans = rowMeans(as.matrix(tmp[, indexes]))
       groups[[f]][[toString(names[row])]] = tmpMeans
     }
   }
   output@metadata = combin
-  for(n in featuresToGroup) {
-    slot(output,n) = as.data.frame(groups[[n]])
-    colnames(slot(output,n)) = tolower(names)
+  for (n in featuresToGroup) {
+    slot(output, n) = as.data.frame(groups[[n]])
+    colnames(slot(output, n)) = tolower(names)
   }
   output <- flies.activity(output)
   
@@ -374,7 +384,7 @@ flies.group <- function(trak, groupBy = NA) {
   names = apply(combin, 1, paste_)
   for (row in 1:nrow(combin)) {
     indexes = which(unname(apply(trak@metadata[groupBy], 1, function(x)
-      all(x == combin[row, ]))))
+      all(x == combin[row,]))))
     groups[[tolower(toString(names[row]))]] = indexes
   }
   return(groups)
@@ -386,10 +396,19 @@ flies.extractTimeWindow <-
            start,
            end,
            timeScale = 'min',
-           features = c("centroid","speed","area","theta","majoraxislength","minoraxislength","direction","orientation","time"),
+           features = c(
+             "centroid",
+             "speed",
+             "area",
+             "theta",
+             "majoraxislength",
+             "minoraxislength",
+             "direction",
+             "orientation",
+             "time"
+           ),
            returnRawData = T,
            removeSamples = NULL) {
-
     if (timeScale %in% c('h', 'hour')) {
       timeFactor = trak@hz * 60 ^ 2
     } else if (timeScale %in% c('m', 'min', 'minute')) {
@@ -403,9 +422,9 @@ flies.extractTimeWindow <-
     }
     
     start <- start * timeFactor
-    if (end == 'end'){
+    if (end == 'end') {
       end <- nrow(trak@speed) + 1
-    } else{ 
+    } else{
       end <- end * timeFactor
     }
     
@@ -470,28 +489,29 @@ flies.extractTimeWindow <-
     
     trak@activity$result <- activity.window
     trak@metadata <-
-      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples),]
+      trak@metadata[!(1:nrow(trak@metadata) %in% removeSamples), ]
     if (returnRawData) {
-      for (name in features[!(features == "time" & features != "centroid" )]) {
-        if(nrow(slot(trak,name)) > 0)
-          slot(trak,name) = slot(trak,name)[start:end,!((1:ncol(slot(trak,name))) %in% removeSamples)]
+      for (name in features[!(features == "time" &
+                              features != "centroid")]) {
+        if (nrow(slot(trak, name)) > 0)
+          slot(trak, name) = slot(trak, name)[start:end, !((1:ncol(slot(trak, name))) %in% removeSamples)]
       }
-      trak@time= trak@time[start:end]
+      trak@time = trak@time[start:end]
       
       #Fixes for specfic types - regress and centroid
       if (nrow(trak@speed.regressed) > 0)
         trak@speed.regressed <-
-          trak@speed.regressed[start:end,!(1:ncol(trak@speed.regressed) %in% removeSamples)]
+        trak@speed.regressed[start:end, !(1:ncol(trak@speed.regressed) %in% removeSamples)]
       if (nrow(trak@centroid) > 0) {
         cols <-
           c(2 * removeSamples - 1, 2 * removeSamples) #The columns in trak@centroid corresponding to removeSamples
         trak@centroid <-
-          trak@centroid[start:end,!(1:ncol(trak@centroid) %in% cols)]
+          trak@centroid[start:end, !(1:ncol(trak@centroid) %in% cols)]
       }
     }
     else{
       for (name in features) {
-        slot(trak,name) = NULL
+        slot(trak, name) = NULL
       }
     }
     return(trak)
@@ -551,7 +571,7 @@ flies.regressSpeed <-
     
     cam_dist <-
       as.vector(as.matrix(cam_dist)) # Proper conversion to vector
-    speed <- as.vector(as.matrix(trak@speed[smpl, ]))
+    speed <- as.vector(as.matrix(trak@speed[smpl,]))
     filter <- !is.na(speed) & speed != 0
     
     model <- lm(speed[filter] ~ cam_dist[filter])
@@ -593,7 +613,7 @@ flies.extractActivity <- function(trak) {
       mean(x$mvBouts.avgSpeed, na.rm = T)
     })
   avgSpeed <-
-    as.vector(mapply(mean, trak@speed[,colnames(trak@speed)]))
+    as.vector(mapply(mean, trak@speed[, colnames(trak@speed)]))
   mvNr <- sapply(trak@activity$result, function(x) {
     x$mvBouts.nr
   })
@@ -668,89 +688,144 @@ flies.extractActivity <- function(trak) {
   }
 }
 
-flies.extractMvBouts <- function(trak, boutLength, boutLength.w = 1, flies = NULL, makeEgocentric = T, timeScale = 's'){
-  if(nrow(trak@centroid) == 0)
-    stop('trak object must contain centroid data')
-  if(length(trak@activity) == 0)
-    stop('trak object must contain phenotypes in the activity slot')
-  if(is.null(flies)){
-    flies <- 1:length(trak@metadata$well_orderastracked)
-    print(flies)
-  }
-  
-  
-  #Set time scale
-  if (timeScale %in% c('h', 'hour')) {
-    timeFactor = trak@hz * 60 ^ 2
-  } else if (timeScale %in% c('m', 'min', 'minute')) {
-    timeFactor = trak@hz * 60
-  } else if (timeScale == 'frames') {
-    timeFactor = 1
-  } else if (timeScale %in% c('s', 'sec')) {
-    timeFactor = trak@hz
-  } else{
-    stop(paste('Did not recognize timeScale:', timeScale))
-  }
-  boutLength.w <- timeFactor*boutLength.w #Get bouts with length boutLength +- boutLength.w
-  boutLength <- timeFactor*boutLength
-  bouts.maxLength <- boutLength + boutLength.w #time windows of this size, starting at inferred start time, will be extracted from trak@centroid
-  
-  flies.mvBouts <- list()
-  for (i in flies) {
-    allBouts.lengths <- trak@activity$result[[i]]$mvBouts.lengths
-    
-    #Identify bouts with length boutLength +- boutLength.w
-    bouts.idx <- which(allBouts.lengths > boutLength - boutLength.w 
-                       & allBouts.lengths < boutLength + boutLength.w)
-    
-    #Starts and lenghts
-    bouts.starts <- trak@activity$result[[i]]$mvBouts.startTimes[bouts.idx]
-    bouts.lengths <- trak@activity$result[[i]]$mvBouts.lengths[bouts.idx]
-    print(i)
-    
-    #Check to see if fly has any usable bouts
-    if (length(bouts.starts) == 0) {
-      #print(paste0("skipping ", i))
-      flies.mvBouts[[i]] <- NA
-      next
+flies.extractMvBouts <-
+  function(trak,
+           boutLength,
+           boutLength.w = 1,
+           flies = NULL,
+           makeEgocentric = T,
+           timeScale = 'frames',
+           start = 1,
+           end = NA) {
+    if (nrow(trak@centroid) == 0)
+      stop('trak object must contain centroid data')
+    if (length(trak@activity) == 0)
+      stop('trak object must contain phenotypes in the activity slot')
+    if (is.null(flies)) {
+      flies <- 1:length(trak@metadata$well_orderastracked)
     }
     
-    #Get centroid data for bouts. There are probably some more efficient way to do this rather than looping, maybe using reshape for instance
-    bouts.centroidIdx <- sapply(bouts.starts, function(x){x:(x + bouts.maxLength)}) #Gives a matrix with one column per bout, with the indices of that bout in trak@centroid note that this creates a static length later on.
-    mvBouts <- data.frame(matrix(nrow = 2 * nrow(bouts.centroidIdx), ncol = ncol(bouts.centroidIdx))) #To store bouts
-    colnames(mvBouts) <- paste0('fly', i, '_', bouts.starts, '_', bouts.starts + bouts.lengths) #Naming every bout by fly number and bout start_end, where end is the one inferred by flies.activity, rather than the window extracted here
-    for (j in 1:length(bouts.idx)) { 
-      xy <- trak@centroid[bouts.centroidIdx[,j], c(i * 2 - 1, i * 2)]
-      #print(dim(xy))
-      if(makeEgocentric){
-        #Center & Rotate every bout
-        #If I'm interpreting this code correctly, this is simply the start time of the bout
-        #print(paste0("Bout Start Time: ", bouts.centroidIdx[1,j]))
-        
-        #https://github.com/de-Bivort-Lab/margo/wiki/Options-and-Parameters -- see entry on heading
-        #This is getting the starting direction in rads for a given bout -- it may need adjustment as it the first 
-        orientation <- trak@direction[bouts.centroidIdx[1,j],i]
-        
-        rotationMatrix <- matrix(c(cos(orientation),-sin(orientation),sin(orientation),cos(orientation)),nrow = 2,ncol = 2,byrow=TRUE)
-        center <- trak@centroid[bouts.centroidIdx[1,j], c(i * 2 - 1, i * 2)]
-        centeredxy <- t(apply(as.matrix(xy), 1, '-', t(center)))
-        
-        #Rotation
-        xy <- t(apply(centeredxy, 1, function(x,rotationMatrix) {rotationMatrix %*% x},rotationMatrix=rotationMatrix))
-        
-        # print("INFO")
-        # print(orientation)
-        # print(xy[1:5,1:2])
-        # print(centeredxy[1:5,1:2])
-        # print(rotatedcenteredxy[1:5,1:2])
-        
+    
+    #Set time scale
+    if (timeScale %in% c('h', 'hour')) {
+      timeFactor = trak@hz * 60 ^ 2
+    } else if (timeScale %in% c('m', 'min', 'minute')) {
+      timeFactor = trak@hz * 60
+    } else if (timeScale == 'frames') {
+      timeFactor = 1
+    } else if (timeScale %in% c('s', 'sec')) {
+      timeFactor = trak@hz
+    } else{
+      stop(paste('Did not recognize timeScale:', timeScale))
+    }
+    
+    if (is.na(end)) {
+      endTime = length(trak@time)
+    } else{
+      endTime = end * timeFactor
+    }
+    startTime = start * timeFactor
+    
+    boutLength.w <-
+      timeFactor * boutLength.w #Get bouts with length boutLength +- boutLength.w
+    boutLength <- timeFactor * boutLength
+    bouts.maxLength <-
+      boutLength + boutLength.w #time windows of this size, starting at inferred start time, will be extracted from trak@centroid
+    
+    flies.mvBouts <- list()
+    for (i in flies) {
+      allBouts.lengths <- trak@activity$result[[i]]$mvBouts.lengths
+      
+      #Identify bouts with length boutLength +- boutLength.w
+      bouts.idx <- which(
+        allBouts.lengths > boutLength - boutLength.w
+        &
+          allBouts.lengths < boutLength + boutLength.w &
+          trak@activity$result[[i]]$mvBouts.startTimes >= startTime &
+          (
+            trak@activity$result[[i]]$mvBouts.startTimes + trak@activity$result[[i]]$mvBouts.lengths - 1
+          ) <= endTime
+      )
+      
+      #Starts and lenghts
+      bouts.starts <-
+        trak@activity$result[[i]]$mvBouts.startTimes[bouts.idx]
+      bouts.lengths <-
+        trak@activity$result[[i]]$mvBouts.lengths[bouts.idx]
+      
+      #Check to see if fly has any usable bouts
+      if (length(bouts.starts) == 0) {
+        flies.mvBouts[[i]] <- NA
+        next
       }
-      mvBouts[,j] <- c(xy[,1], xy[,2])
+      
+      #Get centroid data for bouts. There are probably some more efficient way to do this rather than looping, maybe using reshape for instance
+      bouts.centroidIdx <-
+        sapply(bouts.starts, function(x) {
+          x:(x + bouts.maxLength)
+        }) #Gives a matrix with one column per bout, with the indices of that bout in trak@centroid note that this creates a static length later on.
+      mvBouts <-
+        data.frame(matrix(
+          nrow = 2 * nrow(bouts.centroidIdx),
+          ncol = ncol(bouts.centroidIdx)
+        )) #To store bouts
+      colnames(mvBouts) <-
+        paste0('fly',
+               i,
+               '_',
+               bouts.starts,
+               '_',
+               bouts.starts + bouts.lengths - 1) #Naming every bout by fly number and bout start_end, where end is the one inferred by flies.activity, rather than the window extracted here
+      for (j in 1:length(bouts.idx)) {
+        xy <- trak@centroid[bouts.centroidIdx[, j], c(i * 2 - 1, i * 2)]
+        #print(dim(xy))
+        if (makeEgocentric) {
+          xy[, 2] <- -xy[, 2]
+          
+          #Center & Rotate every bout
+          #If I'm interpreting this code correctly, this is simply the start time of the bout
+          #print(paste0("Bout Start Time: ", bouts.centroidIdx[1,j]))
+          
+          #https://github.com/de-Bivort-Lab/margo/wiki/Options-and-Parameters -- see entry on heading
+          #This is getting the starting direction in raeds for a given bout -- it may need adjustment as it the first
+          
+          # This is using the direction(weighted by speed to determine the direction the fly is traveling for the transformation.)
+          # Note that we dont actually have any info about the "directionality" other than heading(frame to frame angle) and orientation(major axis of ellipse against x axis)
+          if (sum(trak@direction[bouts.centroidIdx[1:5 * trak@hz, j], i] * trak@speed[bouts.centroidIdx[1:trak@hz, j], i]) < 0) {
+            orientation <-
+              (-median(trak@orientation[bouts.centroidIdx[1:trak@hz, j], i]) + 90) *
+              (pi / 180)
+            
+          } else{
+            orientation <-
+              (-median(trak@orientation[bouts.centroidIdx[1:trak@hz, j], i]) - 90) *
+              (pi / 180)
+          }
+          rotationMatrix <-
+            matrix(
+              c(
+                cos(orientation),-sin(orientation),
+                sin(orientation),
+                cos(orientation)
+              ),
+              nrow = 2,
+              ncol = 2,
+              byrow = TRUE
+            )
+          center <- xy[1, 1:2]
+          xy <- t(apply(as.matrix(xy), 1, '-', t(center)))
+          xy <-
+            t(apply(xy, 1, function(x, rotationMatrix) {
+              rotationMatrix %*% x
+            }, rotationMatrix = rotationMatrix))
+          
+        }
+        
+        mvBouts[, j] <- c(xy[, 1], xy[, 2])
+      }
+      
+      #Export
+      flies.mvBouts[[i]] <- mvBouts
     }
-    
-    #Export
-    flies.mvBouts[[i]] <- mvBouts
+    return(flies.mvBouts)
   }
-  return(flies.mvBouts)
-}
-
