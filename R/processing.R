@@ -703,6 +703,7 @@ flies.extractMvBouts <-
       stop('trak object must contain phenotypes in the activity slot')
     if (is.null(flies)) {
       flies <- 1:length(trak@metadata$well_orderastracked)
+      #print(flies)
     }
     
     
@@ -721,10 +722,10 @@ flies.extractMvBouts <-
     
     if (is.na(end)) {
       endTime = length(trak@time)
-    } else{
-      endTime = end * timeFactor
+    }else{
+      endTime = end*timeFactor
     }
-    startTime = start * timeFactor
+    startTime = start*timeFactor
     
     boutLength.w <-
       timeFactor * boutLength.w #Get bouts with length boutLength +- boutLength.w
@@ -740,11 +741,9 @@ flies.extractMvBouts <-
       bouts.idx <- which(
         allBouts.lengths > boutLength - boutLength.w
         &
-          allBouts.lengths < boutLength + boutLength.w &
+          allBouts.lengths < boutLength + boutLength.w & 
           trak@activity$result[[i]]$mvBouts.startTimes >= startTime &
-          (
-            trak@activity$result[[i]]$mvBouts.startTimes + trak@activity$result[[i]]$mvBouts.lengths - 1
-          ) <= endTime
+          (trak@activity$result[[i]]$mvBouts.startTimes + trak@activity$result[[i]]$mvBouts.lengths - 1) <= endTime
       )
       
       #Starts and lenghts
@@ -778,9 +777,10 @@ flies.extractMvBouts <-
                bouts.starts + bouts.lengths - 1) #Naming every bout by fly number and bout start_end, where end is the one inferred by flies.activity, rather than the window extracted here
       for (j in 1:length(bouts.idx)) {
         xy <- trak@centroid[bouts.centroidIdx[, j], c(i * 2 - 1, i * 2)]
-        #print(dim(xy))
+        xy[,2] <- -xy[,2]
         if (makeEgocentric) {
-          xy[, 2] <- -xy[, 2]
+          
+          
           
           #Center & Rotate every bout
           #If I'm interpreting this code correctly, this is simply the start time of the bout
@@ -789,22 +789,24 @@ flies.extractMvBouts <-
           #https://github.com/de-Bivort-Lab/margo/wiki/Options-and-Parameters -- see entry on heading
           #This is getting the starting direction in raeds for a given bout -- it may need adjustment as it the first
           
-          # This is using the direction(weighted by speed to determine the direction the fly is traveling for the transformation.)
-          # Note that we dont actually have any info about the "directionality" other than heading(frame to frame angle) and orientation(major axis of ellipse against x axis)
-          if (sum(trak@direction[bouts.centroidIdx[1:5 * trak@hz, j], i] * trak@speed[bouts.centroidIdx[1:trak@hz, j], i]) < 0) {
-            orientation <-
-              (-median(trak@orientation[bouts.centroidIdx[1:trak@hz, j], i]) + 90) *
-              (pi / 180)
-            
-          } else{
-            orientation <-
-              (-median(trak@orientation[bouts.centroidIdx[1:trak@hz, j], i]) - 90) *
-              (pi / 180)
+          center <- xy[1,1:2]
+          xy <- t(apply(as.matrix(xy), 1, '-', t(center)))
+          
+          #Take angle from (0,0) to (x_10,y_10) and rotate accordingly
+          
+          dir <- atan2(xy[10,2],xy[10,1])
+          if (dir < 0) {
+            dir <- dir + 2*pi
           }
+          
+          #For "up" orientation
+          orientation <- -(dir - pi/2)
+          
           rotationMatrix <-
             matrix(
               c(
-                cos(orientation),-sin(orientation),
+                cos(orientation),
+                -sin(orientation),
                 sin(orientation),
                 cos(orientation)
               ),
@@ -812,8 +814,7 @@ flies.extractMvBouts <-
               ncol = 2,
               byrow = TRUE
             )
-          center <- xy[1, 1:2]
-          xy <- t(apply(as.matrix(xy), 1, '-', t(center)))
+          
           xy <-
             t(apply(xy, 1, function(x, rotationMatrix) {
               rotationMatrix %*% x
