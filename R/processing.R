@@ -696,7 +696,10 @@ flies.extractMvBouts <-
            makeEgocentric = T,
            timeScale = 'frames',
            start = 1,
-           end = NA) {
+           end = NA,
+           rotTime = 10) {
+    #rotTime = number of frames used to determine orientation. If makeEgocentric = T, every bout will be rotated by the angle from (0,0) to (x_rotTime,y_rotTime)
+    
     if (nrow(trak@centroid) == 0)
       stop('trak object must contain centroid data')
     if (length(trak@activity) == 0)
@@ -790,11 +793,11 @@ flies.extractMvBouts <-
           #This is getting the starting direction in raeds for a given bout -- it may need adjustment as it the first
           
           center <- xy[1,1:2]
-          xy <- t(apply(as.matrix(xy), 1, '-', t(center)))
+          xy[,1] - xy[,1] - unlist(center[1])
+          xy[,2] - xy[,2] - unlist(center[2])
           
           #Take angle from (0,0) to (x_10,y_10) and rotate accordingly
-          
-          dir <- atan2(xy[10,2],xy[10,1])
+          dir <- atan2(xy[rotTime, 2],xy[rotTime, 1])
           if (dir < 0) {
             dir <- dir + 2*pi
           }
