@@ -830,3 +830,150 @@ flies.extractMvBouts <-
     }
     return(flies.mvBouts)
   }
+
+flies.extractMvBouts_list <-
+  function(trak,
+           boutLength,
+           flies = NULL,
+           timeScale = 'frames',
+           start = 1,
+           end = NA) {
+    if (nrow(trak@centroid) == 0)
+      stop('trak object must contain centroid data')
+    if (length(trak@activity) == 0)
+      stop('trak object must contain phenotypes in the activity slot')
+    if (is.null(flies)) {
+      flies <- 1:length(trak@metadata$well_orderastracked)
+    }
+    
+    
+    #Set time scale
+    if (timeScale %in% c('h', 'hour')) {
+      timeFactor = trak@hz * 60 ^ 2
+    } else if (timeScale %in% c('m', 'min', 'minute')) {
+      timeFactor = trak@hz * 60
+    } else if (timeScale == 'frames') {
+      timeFactor = 1
+    } else if (timeScale %in% c('s', 'sec')) {
+      timeFactor = trak@hz
+    } else{
+      stop(paste('Did not recognize timeScale:', timeScale))
+    }
+    
+    if (is.na(end)) {
+      endTime = length(trak@time)
+    }else{
+      endTime = end*timeFactor
+    }
+    startTime = start*timeFactor
+    
+    list_of_bouts <- list()
+    for (i in flies) {
+      allBouts.lengths <- trak@activity$result[[i]]$mvBouts.lengths
+      
+      #Identify bouts with length boutLength +- boutLength.w
+      bouts.idx <- which(
+        allBouts.lengths > boutLength &
+          trak@activity$result[[i]]$mvBouts.startTimes >= startTime &
+          (trak@activity$result[[i]]$mvBouts.startTimes + trak@activity$result[[i]]$mvBouts.lengths - 1) <= endTime
+      )
+      
+      #Starts and lenghts
+      bouts.starts <-
+        trak@activity$result[[i]]$mvBouts.startTimes[bouts.idx]
+      bouts.lengths <-
+        trak@activity$result[[i]]$mvBouts.lengths[bouts.idx]
+      
+      #Check to see if fly has any usable bouts
+      if (length(bouts.starts) == 0) {
+        next
+      }
+      
+      bouts.centroidIdx <- list()
+      #Get centroid data for bouts. There are probably some more efficient way to do this rather than looping, maybe using reshape for instance
+      for (k in 1:length(bouts.starts)) {
+        bouts.centroidIdx[[k]] <- bouts.starts[k]:(bouts.starts[k] + bouts.lengths[k] - 1)
+      }
+      
+      naming_vector <-
+        paste0('fly',
+               i,
+               '_',
+               bouts.starts,
+               '_',
+               bouts.starts + bouts.lengths - 1) #Naming every bout by fly number and bout start_end, where end is the one inferred by flies.activity, rather than the window extracted here
+      
+      min_x <- min(trak@centroid[[2*i - 1]][which(trak@centroid[[2*i - 1]] != 0)])
+      max_x <- max(trak@centroid[[2*i - 1]])
+      
+      max_y <- max(trak@centroid[[2*i]])
+      min_y <- min(trak@centroid[[2*i]][which(trak@centroid[[2*i]] != 0)])
+      
+      for (j in 1:length(bouts.idx)) {
+        xy <- trak@centroid[bouts.centroidIdx[[j]], c(i * 2 - 1, i * 2)]
+        orientation <- trak@orientation[bouts.centroidIdx[[j]], i]
+        speed <- trak@speed[bouts.centroidIdx[[j]], i]
+        direction <- trak@direction[bouts.centroidIdx[[j]], i]
+        majoraxislength <- trak@majoraxislength[bouts.centroidIdx[[j]], i]
+        minoraxislength <- trak@minoraxislength[bouts.centroidIdx[[j]], i]
+        phi <- vapply(1:length(orientation),FUN.VALUE=numeric(1),FUN = function(i) {
+          direction_corrected <- orient_heading(direction[i])
+          x <- orientation[i]*pi/180
+          if(x >= 0){
+            x <- -x
+          }else{
+            x <- (x + pi)
+          }
+          y <- direction_corrected
+          possible <- c(atan2(sin(x-y), cos(x-y)),atan2(sin(x-y+pi), cos(x-y+pi)))
+          id <- which(abs(possible) == min(abs(possible)))[1]
+          output <- possible[id]
+          return(output)
+        })
+        
+        
+        #Normalize by observed size(just max-min of observed coords in a given arena)
+        xy[,1] <-  2*(xy[,1]-min_x)/(max_x - min_x) - 1
+        xy[,2] <-  2*(xy[,2]-min_y)/(max_y - min_y) - 1
+        
+        bout_output <- data.frame(x = xy[, 1], y = xy[, 2],speed = speed, direction=direction,orientation = orientation, phi=phi,majoraxislength=majoraxislength,minoraxislength=minoraxislength, fly = rep(i,length(bouts.centroidIdx[[j]])),cluster = rep(j,length(bouts.centroidIdx[[j]])))
+        
+        
+        list_of_bouts[[naming_vector[j]]] <- bout_output
+        
+      }
+      
+    }
+    return(list_of_bouts)
+  }
+
+
+dtwDistance_parallel_listed <- function(spgeom1) {
+  # if second set of lines is not given, calculate pairwise distances within
+  # first set of lines
+  if (is.null(spgeom2)) {
+    # prepare empty distance matrix
+    n_geoms <- length(spgeom1)
+    distmat <- foreach(i=1:(n_geoms - 1),.combine='rbind',.packages = c("sp","dtw","foreach","doParallel")) %dopar% {
+      crds1 <- spgeoms[[i]]
+      temp <- foreach(j=(i + 1):n_geoms,.packages = c("sp","dtw"),.combine="c") %do% {
+        crds2 <- crds1 <- spgeoms[[j]]
+        align <- dtw(crds1,crds2)
+        align$normalizedDistance  # normalized distance
+      }
+      temp <- c(rep(0,(n_geoms - length(temp))),temp)
+      temp
+    }
+    distmat <- rbind(distmat,rep(0,n_geoms))
+    distmat <- t(as.matrix(distmat))
+    # print(dim(distmat))
+    # if two sets of lines are given, calculate pairwise distances
+  }
+  
+  ids <- names(spgeom1)
+  # print(length(ids))
+  
+  colnames(distmat) <- ids
+  rownames(distmat) <- ids
+  return(distmat)
+}
