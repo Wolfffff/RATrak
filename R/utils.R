@@ -332,22 +332,22 @@ readBinary.margo <-
       # mat[, xCols] <- mat.tmp[, 1:colCount]
       # mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
       mat <- mat[startFrame:nrow(mat),] #Shift to correct for margo output
-      #mat[is.nan(mat)] = 0
+      mat[is.nan(mat)] = 0
       
       
-      mat <- apply(mat,2,FUN = function(x){
-        base <- x[which(!is.nan(x))[1]]
-        for (i in 1:length(x)) {
-          if (is.nan(x[i])) {
-            if (identical(x[i-1], numeric(0))) {
-              x[i] = base
-            } else{
-              x[i] = x[i-1]
-            }
-          }
-        }
-        return(x)
-      })
+      # mat <- apply(mat,2,FUN = function(x){
+      #   base <- x[which(!is.nan(x))[1]]
+      #   for (i in 1:length(x)) {
+      #     if (is.nan(x[i])) {
+      #       if (identical(x[i-1], numeric(0))) {
+      #         x[i] = base
+      #       } else{
+      #         x[i] = x[i-1]
+      #       }
+      #     }
+      #   }
+      #   return(x)
+      # })
 
       return(as.data.frame(mat))
     }
