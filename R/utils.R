@@ -30,6 +30,7 @@ lmp <- function (modelobject) {
       majoraxislength = "data.frame",
       minoraxislength = "data.frame",
       orientation = "data.frame",
+      orientation_continuous = "data.frame",
       radius = "data.frame",
       speed = "data.frame",
       speed.regressed = "data.frame",
@@ -211,6 +212,11 @@ readInfo.margo <-
       warning('No metadata provided')
     }
     
+    orientation <- orientation * pi / 180
+    
+    #Continuous phase
+    orientation_continuous <-
+      as.data.frame(do.call(cbind, mclapply(as.data.frame(orientation, unwrap, mc.cores = 16)))
     data <-
       .trak(
         area = area,
@@ -220,6 +226,7 @@ readInfo.margo <-
         majoraxislength = majoraxislength,
         minoraxislength = minoraxislength,
         orientation = orientation,
+        orientation_continuous = orientation_continuous,
         radius = radius,
         speed = speed,
         speed.regressed = data.frame(),
@@ -321,14 +328,14 @@ readBinary.margo <-
       yCols <- seq(from = 2,
                    to = ncol(mat),
                    by = 2)
-      mat = mat[,order(c(xCols,yCols))] 
+      mat <- mat[,order(c(xCols,yCols))] 
       # mat[, xCols] <- mat.tmp[, 1:colCount]
       # mat[, yCols] <- mat.tmp[, (colCount + 1):(colCount * 2)]
-      mat =mat[startFrame:nrow(mat),] #Shift to correct for margo output
+      mat <- mat[startFrame:nrow(mat),] #Shift to correct for margo output
       #mat[is.nan(mat)] = 0
       
       
-      mat <- aaply(mat,2,.parallel=T,.fun = function(x){
+      mat <- apply(mat,2,FUN = function(x){
         base <- x[which(!is.nan(x))[1]]
         for (i in 1:length(x)) {
           if (is.nan(x[i])) {
@@ -469,16 +476,56 @@ dtwDistance_parallel_listed <- function(spgeom1) {
 
 
 
-generateVideo <- function(trak,video_location,fly_number,start,end,width,variables = c("speed","orientation","direction")){
+generate_video <- function(trak,video_location,fly_number,start,end,width,variables = c("speed","orientation","direction")){
   td <- seconds_to_period(86400)
   time_start = sprintf('%02d:%02d:%02d',td@hour + 24*day(td), minute(td), second(td))
   
   
+  y_min <-
+    min(trak@centroid[which(trak@centroid[, 2 * fly_number] !=
+                              0), 2 * fly_number])
+  y_max <-
+    max(trak@centroid[which(trak@centroid[, 2 * fly_number] !=
+                              0), 2 * fly_number])
+  
+  x_min <-
+    min(trak@centroid[which(trak@centroid[, 2 * fly_number - 1] !=
+                              0), 2 * fly_number - 1])
+  x_max <-
+    max(trak@centroid[which(trak@centroid[, 2 * fly_number - 1] !=
+                              0), 2 * fly_number - 1])
+  
+  start_y = y_min - 10
+  start_x = x_min - 10
+  vid_width = 120
+  name_fly_vid = paste0("temp/Fly_Vid_Frame_%d.png")
+  cmd <-
+    paste0('ffmpeg -ss ',
+           start / trak@hz ,
+           " -i ",
+           video_location, 
+           " -t ",
+           (end - start + 1) / trak@hz,
+           ' -filter:v "crop=',
+           vid_width,
+           ':',
+           vid_width,
+           ':',
+           start_x,
+           ':',
+           start_y,
+           '\" ',
+           name_fly_vid,
+           ''
+    )
+  #print(cmd)
+  system(cmd)
+  
+  
   list_of_plots <- list()
   for (i in start:end) {
-    # for (j in 1:length(varia)) {
-    #   
-    # }
+    count <- i - start + 1
+    current_name <- paste0("temp/Fly_Vid_Frame_", count,".png")
     temp <- list()
     j = 0
     if ("speed" %in% variables) {
@@ -491,31 +538,34 @@ generateVideo <- function(trak,video_location,fly_number,start,end,width,variabl
         geom_vline(xintercept = i,color="red",alpha=0.5) +
         #     ggtitle(paste0("Speed from ", start, " to ", end)) +
         ylim(c(0,100))  +
-        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1))
+        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1),limits=c(i-width,i+width)) +
+        theme(axis.text.x=element_blank())
     }
     if ("majoraxislength" %in% variables) {
       j <- j + 1
       temp[[j]] <- ggplot(NULL,aes(x=(i-width):(i+width),y=trak@majoraxislength[(i-width):(i+width),fly_number])) +
         geom_path() +
         theme_minimal() +
-        ylab("Major Axis Length") +
+        ylab("Major Axis") +
         xlab("") +
         geom_vline(xintercept = i,color="red",alpha=0.5) +
         #  ggtitle(paste0("Major Axis Length from ", start, " to ", end)) +
         ylim(c(0,50)) +
-        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1))
+        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1),limits=c(i-width,i+width)) +
+        theme(axis.text.x=element_blank())
     }
     if ("minoraxislength" %in% variables) {
       j <- j + 1
       temp[[j]] <- ggplot(NULL,aes(x=(i-width):(i+width),y=trak@minoraxislength[(i-width):(i+width),fly_number])) +
         geom_path() +
         theme_minimal() +
-        ylab("Minor Axis Length") +
+        ylab("Minor Axis") +
         xlab("") +
         geom_vline(xintercept = i,color="red",alpha=0.5) +
         #    ggtitle(paste0("Minor Axis Length from ", start, " to ", end)) +
         ylim(c(0,20)) +
-        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1))
+        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1),limits=c(i-width,i+width)) +
+        theme(axis.text.x=element_blank())
     }
     if ("orientation" %in% variables) {
       j <- j + 1
@@ -526,8 +576,36 @@ generateVideo <- function(trak,video_location,fly_number,start,end,width,variabl
         xlab("") +
         geom_vline(xintercept = i,color="red",alpha=0.5) +
         #ggtitle(paste0("Orientation from ", start, " to ", end)) +
-        ylim(c(-90,90)) +
-        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1))
+        ylim(c(-pi/2,pi/2)) +
+        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1),limits=c(i-width,i+width)) +
+        theme(axis.text.x=element_blank())
+    }
+    if ("orientation_continuous" %in% variables) {
+      j <- j + 1
+      temp[[j]] <- ggplot(NULL,aes(x=(i-width):(i+width),y=trak@orientation_continuous[(i-width):(i+width),fly_number])) +
+        geom_path() +
+        theme_minimal() +
+        ylab("Cont. Orientation") +
+        xlab("") +
+        geom_vline(xintercept = i,color="red",alpha=0.5) +
+        #ggtitle(paste0("Orientation from ", start, " to ", end)) +
+        ylim(c(min(trak@orientation_continuous[(start-width):end,fly_number]),max(trak@orientation_continuous[start:end,fly_number]))) +
+        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1),limits=c(i-width,i+width)) +
+        theme(axis.text.x=element_blank())
+    }
+    
+    if ("area" %in% variables) {
+      j <- j + 1
+      temp[[j]] <- ggplot(NULL,aes(x=(i-width):(i+width),y=trak@area[(i-width):(i+width),fly_number])) +
+        geom_path() +
+        theme_minimal() +
+        ylab("Area") +
+        xlab("") +
+        geom_vline(xintercept = i,color="red",alpha=0.5) +
+        #ggtitle(paste0("Orientation from ", start, " to ", end)) +
+        ylim(c(min(trak@area[(start-width):(end+width),fly_number]),max(trak@area[(start-width):(end+width),fly_number]))) +
+        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1),limits=c(i-width,i+width)) +
+        theme(axis.text.x=element_blank())
     }
     
     if ("direction" %in% variables) {
@@ -536,42 +614,52 @@ generateVideo <- function(trak,video_location,fly_number,start,end,width,variabl
         geom_path() +
         theme_minimal() +
         ylab("Direction") +
-        xlab(paste0("Time from ", start)) +
+        xlab(paste0("Frame Number")) +
         geom_vline(xintercept = i,color="red",alpha=0.5) +
         # ggtitle(paste0("Direction from ", start, " to ", end)) +
-        ylim(c(-3.15,3.15)) +
-        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1))
+        ylim(c(-pi,pi )) +
+        scale_x_continuous(breaks = round(seq(min(i-width), (i+width), by = 10),1),limits=c(i-width,i+width))
     }
     
-    temp_plot <- do.call("arrangeGrob", c(temp, ncol=1))
-    img_height <- j*2
-    img_width <- trak@hz
-    ggsave(paste0("temp/temp_",i,".png"),temp_plot,height = img_height,width=img_width,units = "in",dpi=300)
+    centroid_x <- trak@centroid[i,2*fly_number-1]-start_x
+    centroid_y <- trak@centroid[i,2*fly_number]-start_y
+    
+    vec_start_x <- trak@centroid[i-1,2*fly_number-1]-start_x
+    vec_start_y <- trak@centroid[i-1,2*fly_number]-start_y
+    
+    majoraxislength <- trak@majoraxislength[i,fly_number]
+    minoraxislength <- trak@minoraxislength[i,fly_number]
+    orientation <- f1s_set1@orientation[i,fly_number]
+    current_name <- paste0("temp/Fly_Vid_Frame_", count,".png")
+    base <- image_ggplot(image_read(current_name)) + 
+      geom_point(aes(x=centroid_x,y=centroid_y),color="red") +
+      geom_ellipse(aes(x0=centroid_x,y0=centroid_y,a = majoraxislength/2,b=minoraxislength/2,angle=orientation)) + 
+      geom_segment(aes(xend=centroid_x,yend=centroid_y,x=vec_start_x,y=vec_start_y),arrow = arrow(length=unit(0.10,"cm"),type="closed"))
+    
+    temp_plot <- plot_grid(plotlist = temp,align="v",ncol=1)
+    
+    output <- plot_grid(temp_plot,base,ncol=2,rel_widths = c(1,1),rel_heights = c(1,1))
+    
+    
+    ggsave(paste0("temp/temp_",i,".png"),output,height = 8,width=16,units = "in",dpi=320)
     
   }
   
-  name_plots=paste0("temp/",format(Sys.time(), "%Y-%m-%d_%H%M%S"),".mp4")
-  system(paste0("ffmpeg -framerate ", f1s_set1_activity@hz ," -pattern_type glob -i './temp/temp_%d.png' " ,name_plots),wait = T)
+  name_plots=paste0("temp/Fly",fly_number,"_Start",start,"_End",end,"_Time",format(Sys.time(), "%Y-%m-%d_%H%M%S"),".mp4")
+  merge_cmd <- paste0("ffmpeg -framerate ", trak@hz ," -start_number ",start, " -i 'temp/temp_%d.png' -pix_fmt yuv420p " ,name_plots)
+  #print(merge_cmd)
+  system(merge_cmd,wait = T)
   
-  y_min <- min(f1s_set1_activity@centroid[which(f1s_set1_activity@centroid[,2*fly_number] !=0 ),2*fly_number])
-  y_max <-max(f1s_set1_activity@centroid[which(f1s_set1_activity@centroid[,2*fly_number] !=0 ),2*fly_number])
-  x_min <- min(f1s_set1_activity@centroid[which(f1s_set1_activity@centroid[,2*fly_number - 1] !=0 ),2*fly_number - 1])
-  x_max <- max(f1s_set1_activity@centroid[which(f1s_set1_activity@centroid[,2*fly_number - 1] !=0 ),2*fly_number - 1])
   
-  start_y = y_min - 10
-  start_x = x_min - 10
-  width = 120
-  name_fly_vid=paste0("temp/",format(Sys.time(), "%Y-%m-%d_%H%M%S"),"_Fly_Vid.mp4")
-  cmd <- paste0('ffmpeg -ss ', start/trak@hz , " -i ", video_location," -t ", (end-start)/trak@hz,' -filter:v "crop=',width,':',width,':',start_x,':',start_y,'\" ',name_fly_vid,'')
-  system(cmd)
   
-  name_merged=paste0("temp/",format(Sys.time(), "%Y-%m-%d_%H%M%S"),"Fly",fly_number,"_Start",start,"_End_",end,"_Merged.mp4")
+  #name_merged=paste0("temp/",format(Sys.time(), "%Y-%m-%d_%H%M%S"),"Fly",fly_number,"_Start",start,"_End_",end,"_Merged.mp4")
   
-  cmd_combine <- paste0("ffmpeg -i ",name_plots," -i ", name_fly_vid, ' -filter_complex "[0][1]scale2ref=\'oh*mdar\':\'if(lt(main_h,ih),ih,main_h)\'[0s][1s];[1s][0s]scale2ref=\'oh*mdar\':\'if(lt(main_h,ih),ih,main_h)\'[1s][0s];[0s][1s]hstack,setsar=1"', " -preset ultrafast ", name_merged)
-  print(cmd_combine)
-  system(cmd_combine,wait=T)
+  #cmd_combine <- paste0("ffmpeg -i ",name_plots," -i ", name_fly_vid, ' -filter_complex "[0][1]scale2ref=\'oh*mdar\':\'if(lt(main_h,ih),ih,main_h)\'[0s][1s];[1s][0s]scale2ref=\'oh*mdar\':\'if(lt(main_h,ih),ih,main_h)\'[1s][0s];[0s][1s]hstack,setsar=1"', " -preset ultrafast ", name_merged) 
+  #print(cmd_combine)
+  #system(cmd_combine,wait=T)
   
-  system("rm ./temp/temp_*")
+  system("rm temp/temp_*")
+  system("rm temp/Fly_Vid_Frame_*")
   
 }
 
@@ -618,3 +706,24 @@ get_time_diff <- function(start_time){
   return(time_to_section_start)
 }
 
+
+
+unwrap <- function(data, tol = pi/1.2, step = pi) 
+{
+  data_length <- length(data)
+  for (a in 1:(data_length - 1)) {
+    b <- a + 1
+    data_diff <- data[a] - data[b]
+    if (data_diff <= (-tol)) {
+      for (c in b:data_length) {
+        data[c] <- data[c] - step
+      }
+    }
+    if (data_diff >= (tol)) {
+      for (c in b:data_length) {
+        data[c] <- data[c] + step
+      }
+    }
+  }
+  return(data)
+}
